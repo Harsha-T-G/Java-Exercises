@@ -46,7 +46,6 @@ public class Main{
     }
 
     public static void displayMenu(){
-        System.out.println();
         System.out.println("Please Select the Option");
         System.out.println("1. Create Account");
         System.out.println("2. Deposit Amount");

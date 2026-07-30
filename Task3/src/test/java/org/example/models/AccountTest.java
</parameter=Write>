@@ -1,0 +1,20 @@
+@Test
+    void testSuccessfulDeposit() throws Exception {
+        BigDecimal depositAmount = new BigDecimal("250.00");
+        BigDecimal expectedBalance = INITIAL_BALANCE.add(depositAmount);
+
+        BigDecimal actualBalance = account.deposit(depositAmount);
+
+        assertEquals(expectedBalance, actualBalance);
+        assertEquals(expectedBalance, account.getCurrentBalance());
+
+        // Verify transaction recorded
+        List<Transaction> transactions = account.getTransactionHistory();
+        assertEquals(2, transactions.size()); // Initial + deposit
+
+        Transaction depositTx = transactions.get(1);
+        assertEquals(TransactionType.DEPOSIT, depositTx.type());
+        assertEquals(depositAmount, depositTx.amount());
+        assertEquals(INITIAL_BALANCE, depositTx.balanceBefore());
+        assertEquals(expectedBalance, depositTx.balanceAfter());
+    }
