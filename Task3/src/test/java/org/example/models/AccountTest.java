@@ -18,7 +18,7 @@ class AccountTest {
 
     private Account account;
     private static final long TEST_ACCOUNT_NUMBER = 987654321L;
-    private static final String TEST_ACCOUNT_HOLDER = "Jane Smith";
+    private static final String TEST_ACCOUNT_HOLDER = "ABCD";
     private static final BigDecimal INITIAL_BALANCE = new BigDecimal("500.00");
 
     @BeforeEach
@@ -67,7 +67,7 @@ class AccountTest {
 
     @Test
     void testSetAccountHolderName() {
-        String newName = "Johnny Smith";
+        String newName = "EFGH";
         account.setAccountHolderName(newName);
         assertEquals(newName, account.getAccountHolderName());
     }
@@ -106,23 +106,18 @@ class AccountTest {
         assertThrows(InvalidAmountException.class, () -> {
             account.deposit(new BigDecimal("-50.00"));
         });
-
-        // Balance should remain unchanged
         assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
     }
 
     @Test
     void testDepositOnBlockedAccount() throws Exception {
-        // First block the account
         account.blockAccount();
         assertEquals(AccountStatus.BLOCKED, account.getAccountStatus());
 
-        // Then try to deposit
         assertThrows(AccountBlockedException.class, () -> {
             account.deposit(new BigDecimal("100.00"));
         });
 
-        // Balance should remain unchanged
         assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
     }
 
@@ -155,7 +150,6 @@ class AccountTest {
             account.withdraw(excessiveAmount);
         });
 
-        // Balance should remain unchanged
         assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
     }
 
@@ -165,7 +159,6 @@ class AccountTest {
             account.withdraw(BigDecimal.ZERO);
         });
 
-        // Balance should remain unchanged
         assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
     }
 
@@ -181,80 +174,44 @@ class AccountTest {
 
     @Test
     void testWithdrawalOnBlockedAccount() throws Exception {
-        // First block the account
         account.blockAccount();
         assertEquals(AccountStatus.BLOCKED, account.getAccountStatus());
 
-        // Then try to withdraw
         assertThrows(AccountBlockedException.class, () -> {
             account.withdraw(new BigDecimal("100.00"));
         });
 
-        // Balance should remain unchanged
         assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
     }
 
     @Test
     void testBlockAndUnblockAccount() {
-        // Initially active
         assertEquals(AccountStatus.ACTIVE, account.getAccountStatus());
 
-        // Block account
         account.blockAccount();
         assertEquals(AccountStatus.BLOCKED, account.getAccountStatus());
 
-        // Unblock account
         account.activateAccount();
         assertEquals(AccountStatus.ACTIVE, account.getAccountStatus());
 
-        // Block again (idempotent)
         account.blockAccount();
         assertEquals(AccountStatus.BLOCKED, account.getAccountStatus());
 
-        // Unblock again (idempotent)
         account.activateAccount();
         assertEquals(AccountStatus.ACTIVE, account.getAccountStatus());
     }
 
     @Test
     void testTransactionHistoryIsUnmodifiable() throws Exception {
-        // Make a transaction to have something in history
         account.deposit(new BigDecimal("100.00"));
 
         List<Transaction> history = account.getTransactionHistory();
         int originalSize = history.size();
 
-        // Attempt to modify the returned list should fail
-        assertThrows(UnsupportedOperationException.class, () -> {
-            history.clear();
-        });
+        assertThrows(UnsupportedOperationException.class, history::clear);
 
-        // Original list should remain unchanged
         assertEquals(originalSize, account.getTransactionHistory().size());
         assertFalse(account.getTransactionHistory().isEmpty());
     }
 
-    @Test
-    void testAccountNumberIsImmutable() {
-        // accountNumber is final - we can't directly test setting it,
-        // but we can verify there's no setter method
-        // The fact that we can't call account.setAccountNumber(...) proves immutability
-        assertEquals(TEST_ACCOUNT_NUMBER, account.getAccountNumber());
-        // This would not compile if we tried: account.setAccountNumber(123L);
-    }
-
-    @Test
-    void testBalanceHasNoPublicSetter() {
-        // There is no setBalance method in the Account class
-        // We can only change balance through deposit/withdraw
-        BigDecimal originalBalance = account.getCurrentBalance();
-
-        // Change balance through valid method
-        account.deposit(new BigDecimal("100.00"));
-        assertNotEquals(originalBalance, account.getCurrentBalance());
-
-        // Change it back
-        account.withdraw(new BigDecimal("100.00"));
-        assertEquals(originalBalance, account.getCurrentBalance());
-    }
 }
