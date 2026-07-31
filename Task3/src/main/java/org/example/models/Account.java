@@ -2,14 +2,12 @@ package org.example.models;
 
 import org.example.constants.AccountStatus;
 import org.example.constants.TransactionType;
-import org.example.exception.AccountBlockedException;
-import org.example.exception.InsufficientFundsException;
-import org.example.exception.InvalidAmountException;
 import org.example.exception.NegativeInitialBalanceException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,12 +42,16 @@ public class Account {
         }
     }
 
-    public Account(long accountNumber, String accountHolderName) {
+    public Account(long accountNumber, String accountHolderName, AccountStatus status) {
         this.accountNumber = accountNumber;
         this.accountHolderName = accountHolderName;
         this.currentBalance = BigDecimal.ZERO;
-        this.accountStatus = AccountStatus.ACTIVE;
+        this.accountStatus = (status != null) ? status : AccountStatus.ACTIVE;
         this.transactionHistory = new ArrayList<>();
+    }
+
+    public Account(long accountNumber, String accountHolderName) {
+        this(accountNumber, accountHolderName, AccountStatus.ACTIVE);
     }
 
     public long getAccountNumber() {
@@ -68,68 +70,23 @@ public class Account {
         return currentBalance;
     }
 
+    public void setCurrentBalance(BigDecimal currentBalance) {
+        this.currentBalance = currentBalance;
+    }
+
     public AccountStatus getAccountStatus() {
         return accountStatus;
     }
 
+    public void setAccountStatus(AccountStatus accountStatus) {
+        this.accountStatus = accountStatus;
+    }
+
     public List<Transaction> getTransactionHistory() {
-        return List.copyOf(transactionHistory);
+        return Collections.unmodifiableList(transactionHistory);
     }
 
-    public BigDecimal deposit(BigDecimal amount) throws InvalidAmountException, AccountBlockedException {
-        if (accountStatus == AccountStatus.BLOCKED) {
-            throw new AccountBlockedException("Cannot deposit to blocked account");
-        }
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new InvalidAmountException("Deposit amount must be positive");
-        }
-
-        BigDecimal balanceBefore = this.currentBalance;
-        this.currentBalance = this.currentBalance.add(amount);
-
-        Transaction transaction = new Transaction(
-            UUID.randomUUID().toString(),
-            TransactionType.DEPOSIT,
-            amount,
-            balanceBefore,
-            this.currentBalance,
-            LocalDateTime.now()
-        );
+    public void addTransaction(Transaction transaction) {
         this.transactionHistory.add(transaction);
-        return this.currentBalance;
-    }
-
-    public BigDecimal withdraw(BigDecimal amount) throws InsufficientFundsException, InvalidAmountException, AccountBlockedException {
-        if (accountStatus == AccountStatus.BLOCKED) {
-            throw new AccountBlockedException("Cannot withdraw from blocked account");
-        }
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new InvalidAmountException("Withdrawal amount must be positive");
-        }
-        if (amount.compareTo(this.currentBalance) > 0) {
-            throw new InsufficientFundsException("Insufficient balance for withdrawal");
-        }
-
-        BigDecimal balanceBefore = this.currentBalance;
-        this.currentBalance = this.currentBalance.subtract(amount);
-
-        Transaction transaction = new Transaction(
-            UUID.randomUUID().toString(),
-            TransactionType.WITHDRAWAL,
-            amount,
-            balanceBefore,
-            this.currentBalance,
-            LocalDateTime.now()
-        );
-        this.transactionHistory.add(transaction);
-        return this.currentBalance;
-    }
-
-    public void blockAccount() {
-        this.accountStatus = AccountStatus.BLOCKED;
-    }
-
-    public void activateAccount() {
-        this.accountStatus = AccountStatus.ACTIVE;
     }
 }

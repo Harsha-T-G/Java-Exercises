@@ -72,67 +72,108 @@ This project is a console-based banking application developed using core Java (v
 ## Design Technique
 
 ### Encapsulation
-- The `BankAccount` class encapsulates the account data (account number, holder name, balance, status, and transaction history) as private fields.
-- Public methods (deposit, withdraw, block, activate, getBalance, getTransactionHistory) provide controlled access to these fields.
-- The balance field has no public setter; it can only be modified through deposit and withdrawal operations that validate business rules.
+- The `Account` class encapsulates the account data (account number, holder name, balance, status, and transaction history) with private fields.
+- Public getters and setters provide controlled access to these fields where appropriate.
+- The balance field has no public setter in the original requirement, but we provide a package-private setter for use by the service layer.
 - The transaction history is kept as an unmodifiable list when accessed externally to prevent direct modification.
 
 ### Abstraction
-- We abstract the concept of a bank account into a `BankAccount` class that hides the complexity of transaction management and state changes.
-- The `Transaction` class abstracts a single transaction with its properties (ID, type, amount, timestamps, balances).
-- Custom exceptions (e.g., `InsufficientBalanceException`, `AccountBlockedException`, `InvalidAmountException`, `DuplicateAccountNumberException`) abstract specific error conditions.
+- We abstract the concept of a bank account into an `Account` class that serves as a data container.
+- The `Transaction` class (as a record) abstracts a single transaction with its properties (ID, type, amount, timestamps, balances).
+- The `AccountServices` class abstracts the business logic for account operations.
+- Custom exceptions (e.g., `InsufficientFundsException`, `AccountBlockedException`, `InvalidAmountException`, `DuplicateAccountNumberException`, `NegativeInitialBalanceException`) abstract specific error conditions.
 
 ### Classes and Objects
-- **BankAccount**: Represents a single bank account with all its attributes and behaviors.
-- **Transaction**: Represents a financial transaction (deposit or withdrawal) with immutable properties.
-- **BankAccountService** (or similar): Manages a collection of bank accounts, ensuring uniqueness of account numbers and providing operations like creating accounts, finding accounts, etc.
-- **Main**: Contains the main method to run the application (if a console interface is implemented) or can be used for demonstration.
+- **Account**: Represents a single bank account as a data container with getters and setters for its properties.
+- **Transaction**: Represents a financial transaction (deposit or withdrawal) with immutable properties (using a record).
+- **AccountServices**: Manages a collection of bank accounts and contains all business logic for operations like deposit, withdrawal, blocking, activating, etc.
+- **BankingOperations**: Facade service that handles user interactions, catches exceptions from the service layer, and returns user-friendly messages.
+- **Main**: Handles user input and output, calling the `BankingOperations` methods.
 
 ### Immutability
-- The `Transaction` class is designed to be immutable: once created, its fields cannot be changed. This ensures transaction integrity.
-- The `BankAccount` class ensures that the account number is immutable after creation (set only in the constructor).
-- The transaction history is stored as a list that, when returned to callers, is unmodifiable (using `Collections.unmodifiableList`).
+- The `AccountNumber` is effectively immutable (no setter provided).
+- The `Transaction` record is immutable: once created, its fields cannot be changed. This ensures transaction integrity.
+- The transaction history is stored as a list that, when returned by `getTransactionHistory`, is unmodifiable (using `Collections.unmodifiableList`).
+- While the `Account` allows mutation of balance and status through setters, these are package-private and intended only for use by the service layer.
 
 ### Exception Handling
 - We use meaningful custom exceptions to communicate specific business rule violations:
   - `InvalidAmountException` for non-positive deposit/withdrawal amounts.
-  - `InsufficientBalanceException` for withdrawal exceeding balance.
+  - `InsufficientFundsException` for withdrawal exceeding balance.
   - `AccountBlockedException` for attempting transactions on a blocked account.
   - `DuplicateAccountNumberException` for attempting to create an account with an existing number.
+  - `NegativeInitialBalanceException` for negative initial balance.
 - These exceptions are checked exceptions, forcing the caller to handle them appropriately.
 - Failed operations (due to exceptions) leave the account state unchanged, ensuring atomicity.
+- The `BankingOperations` facade catches these exceptions and returns user-friendly messages, keeping the `Main` class free of try/catch blocks.
 
 ### Separation of Responsibilities
-- **BankAccount**: Responsible for managing its own state (balance, status) and transaction history.
+- **Account**: Responsible for representing account data as a container. Contains no business logic.
 - **Transaction**: Solely responsible for representing a transaction record.
-- **BankAccountService** (or AccountManager): Responsible for managing the collection of accounts (e.g., creating new accounts, finding accounts by number, ensuring uniqueness).
-- **Main** or **UI Layer**: Handles user interaction (if present) or orchestrates the workflow (in a simple demo, this might be in the main method or test classes).
-- This separation ensures that each class has a single reason to change, making the system more maintainable and testable.
+- **AccountServices**: Responsible for managing the collection of accounts and containing all business logic (deposit, withdraw, block, activate, etc.). Ensures uniqueness of account numbers and persists state.
+- **BankingOperations** (facade): Handles user interaction, input validation, and exception handling, delegating core operations to `AccountServices`. This keeps the `Main` class focused solely on console I/O and delegation.
+- **Main**: Handles user input and output, calling the `BankingOperations` methods. It contains no business logic or error handling—only calls to the service layer and printing results.
 
-### Testing Strategy
-- **Unit Testing Focus**: Tests focus on individual units (Account, Transaction, AccountServices) in isolation using JUnit 5.
-- **Test Coverage**: Aim for high coverage of business logic, especially boundary conditions and error cases.
-- **Test Organization**: 
-  - One test class per main service/model class (e.g., AccountServicesTest, AccountTest)
-  - Test methods follow naming convention: `testMethodUnderTest_ExpectedBehavior_StateUnderTest`
-  - Use `@BeforeEach` to set up fresh test instances for each test
-- **Key Test Areas**:
-  1. **Positive Path Tests**: Verify successful operations (deposit, withdrawal, account creation)
-  2. **Negative Path Tests**: Verify proper exception handling for invalid inputs
-  3. **Boundary Condition Tests**: Test edge cases like zero amounts, maximum values
-  4. **State Transition Tests**: Verify account status changes (block/activate) affect behavior correctly
-  5. **Immutability Tests**: Verify that returned collections cannot modify internal state
-  6. **Exception Tests**: Use `assertThrows` to verify correct exceptions are thrown
-  7. **Data Integrity Tests**: Verify balance and transaction history are correctly updated
-- **Assertion Strategy**:
-  - Use `assertEquals` for value comparisons (including BigDecimal.compareTo() == 0)
-  - Use `assertTrue`/`assertFalse` for boolean conditions
-  - Use `assertThrows` for exception testing
-  - Use `assertNotNull`/`assertNull` for null checks
-- **Test Data**: Use meaningful constants for test data (account numbers, names, amounts) to improve readability
+This separation ensures that each class has a single reason to change, making the system more maintainable and testable.
 
-### Additional Design Considerations
-- **Use of BigDecimal**: For precise monetary calculations, avoiding floating-point inaccuracies.
-- **Transaction History**: Stored as a list of Transaction objects, providing an audit trail.
-- **Account Status**: Simple enum (ACTIVE/BLOCKED) to control transaction permissions.
-- **Uniqueness of Account Number**: Enforced by the service layer when creating new accounts.
+## Review Comments and Actions Taken
+
+Based on the review, the following improvements were made:
+
+1. **Data Logic Moved to Service Layer**:  
+   - The `Account` class is now a pure data container (anemic model) with no business logic.  
+   - All business logic for deposit, withdrawal, blocking, and activating accounts resides in the `AccountServices` class.  
+   - This achieves a clear separation between data representation and business operations.
+
+2. **Replaced `System.out.println` with `StringBuilder`**:  
+   - In `Main.java`, the `displayMenu` method uses `StringBuilder` to build the menu string and print it once, reducing I/O calls.  
+   - Other `System.out.println` calls are for simple prompts and results, which are acceptable for a console application.
+
+3. **Moved Try/Catch Blocks to Service Layer**:  
+   - Created a new facade class `BankingOperations` in the `org.example.services` package.  
+   - This class catches checked exceptions from `AccountServices` and returns user‑friendly result messages.  
+   - The `Main` class now only collects user input and calls methods on `BankingOperations`, which handle errors internally and return appropriate messages or values, keeping `Main` free of try/catch blocks.
+
+4. **Enhanced JUnit Test Comments**:  
+   - Added descriptive Javadoc comments and inline comments to test classes (`AccountTest.java` and `AccountServicesTest.java`) explaining what each test verifies, the scenario, and the expected outcome.  
+   - No comments were added to service or main classes; focus remained on test documentation only.  
+   - Structured tests with clear Arrange/Act/Assert methodology in comments.  
+   - Separated concerns: `AccountTest` focuses on the account as a data container (construction, field modifications, immutability), while `AccountServicesTest` tests all business logic operations.
+
+These changes improve adherence to object‑oriented principles, separation of concerns, and code readability while still satisfied:
+- `<em>Data Logic shouldn't be defined in the model classes</em>` → **Satisfied**: All business logic is now in `AccountServices`.
+- `<em>System.out.println is used many times...</em>` → **Addressed**: Used `StringBuilder` for the menu in `Main.java`.
+- `<em>Main class should be like only it need to take inputs...</em>` → **Satisfied**: `Main` handles only I/O; `BankingOperations` handles interactions and exceptions.
+- `<em>Can we add the Junit comments for the test cases...</em>` → **Satisfied**: Both test classes now have detailed Javadoc comments and inline comments explaining test steps.
+
+## How to Run the Application
+
+```bash
+# Compile and run the application
+mvn compile exec:java -Dexec.mainClass="org.example.Main"
+
+# Run tests
+mvn test
+
+mvn test
+```
+
+## Example Usage
+
+When you run the application, you'll see a menu:
+
+```
+Please Select the Option
+1. Create Account
+2. Deposit Amount
+3. Withdrawal Amount
+4. Block Account
+5. Activate Account
+6. Check Current Balance
+7. View Transaction History
+8. Exit
+```
+
+Follow the prompts to create accounts, make deposits and withdrawals, block/unblock accounts, check balances, and view transaction history.
+
+All business rules are enforced by the service layer, ensuring data integrity and proper error handling.

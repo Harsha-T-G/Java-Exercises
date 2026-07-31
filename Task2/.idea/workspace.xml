@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f876a950-37e4-4646-8cde-ce1dedd4101d" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../Task3/src/test/java/org/example/models/AccountTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/../Task3/src/test/java/org/example/models/AccountTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Task3/src/test/java/org/example/models/AccountTest.java&#10;&lt;/parameter=Write&gt;" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Task3/src/test/java/org/example/models/TransactionTest.java" beforeDir="false" />
-    </list>
+    <list default="true" id="f876a950-37e4-4646-8cde-ce1dedd4101d" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

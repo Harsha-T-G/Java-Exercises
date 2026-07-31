@@ -2,9 +2,6 @@ package org.example.models;
 
 import org.example.constants.AccountStatus;
 import org.example.constants.TransactionType;
-import org.example.exception.AccountBlockedException;
-import org.example.exception.InsufficientFundsException;
-import org.example.exception.InvalidAmountException;
 import org.example.exception.NegativeInitialBalanceException;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +11,11 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Unit tests for the Account class.
+ * Tests cover construction, field modifications, and transaction history immutability.
+ * Business logic tests (deposit, withdraw, block, activate) are in AccountServicesTest.
+ */
 class AccountTest {
 
     private Account account;
@@ -23,19 +25,25 @@ class AccountTest {
 
     @BeforeEach
     void setUp() {
+        // Initialize a fresh account before each test
         account = new Account(TEST_ACCOUNT_NUMBER, TEST_ACCOUNT_HOLDER, INITIAL_BALANCE, AccountStatus.ACTIVE);
     }
 
+    /**
+     * Tests that an account is correctly initialized with the provided initial balance
+     * and that an initial deposit transaction is recorded.
+     */
     @Test
     void testConstructorWithInitialBalance() {
+        // Assert
         assertEquals(TEST_ACCOUNT_NUMBER, account.getAccountNumber());
         assertEquals(TEST_ACCOUNT_HOLDER, account.getAccountHolderName());
         assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
         assertEquals(AccountStatus.ACTIVE, account.getAccountStatus());
 
-        // Should have initial deposit transaction
+        // Verify that an initial deposit transaction was created
         List<Transaction> transactions = account.getTransactionHistory();
-        assertEquals(1, transactions.size());
+        assertEquals(1, transactions.size(), "Expected exactly one transaction (initial deposit)");
 
         Transaction initialTransaction = transactions.get(0);
         assertEquals(TransactionType.DEPOSIT, initialTransaction.type());
@@ -44,174 +52,163 @@ class AccountTest {
         assertEquals(INITIAL_BALANCE, initialTransaction.balanceAfter());
     }
 
+    /**
+     * Tests that an account can be created with zero initial balance
+     * and that no transaction is recorded when the initial balance is zero.
+     */
     @Test
     void testConstructorWithoutInitialBalance() {
+        // Act
         Account zeroBalanceAccount = new Account(TEST_ACCOUNT_NUMBER, TEST_ACCOUNT_HOLDER);
 
+        // Assert
         assertEquals(TEST_ACCOUNT_NUMBER, zeroBalanceAccount.getAccountNumber());
         assertEquals(TEST_ACCOUNT_HOLDER, zeroBalanceAccount.getAccountHolderName());
         assertEquals(BigDecimal.ZERO, zeroBalanceAccount.getCurrentBalance());
         assertEquals(AccountStatus.ACTIVE, zeroBalanceAccount.getAccountStatus());
 
-        // Should have no transactions
+        // No transactions should be present for zero initial balance
         List<Transaction> transactions = zeroBalanceAccount.getTransactionHistory();
-        assertEquals(0, transactions.size());
+        assertEquals(0, transactions.size(), "Expected zero transactions for zero initial balance");
     }
 
+    /**
+     * Ensures that creating an account with a negative initial balance
+     * throws the appropriate exception.
+     */
     @Test
     void testConstructorWithNegativeInitialBalance() {
+        // Act & Assert
         assertThrows(NegativeInitialBalanceException.class, () -> {
             new Account(TEST_ACCOUNT_NUMBER, TEST_ACCOUNT_HOLDER, new BigDecimal("-100.00"), AccountStatus.ACTIVE);
         });
     }
 
+    /**
+     * Tests that the account holder's name can be updated via the setter.
+     */
     @Test
     void testSetAccountHolderName() {
+        // Arrange
         String newName = "EFGH";
+
+        // Act
         account.setAccountHolderName(newName);
-        assertEquals(newName, account.getAccountHolderName());
+
+        // Assert
+        assertEquals(newName, account.getAccountHolderName(), "Account holder name should be updated");
     }
 
+    /**
+     * Tests that the current balance can be updated via the setter.
+     */
     @Test
-    void testSuccessfulDeposit() throws Exception {
-        BigDecimal depositAmount = new BigDecimal("2500");
-        BigDecimal newBalance = account.deposit(depositAmount);
-        assertEquals(INITIAL_BALANCE.add(depositAmount),newBalance,"The New Balance differ from the required amount");
+    void testSetCurrentBalance() {
+        // Arrange
+        BigDecimal newBalance = new BigDecimal("750.00");
 
-        assertEquals(INITIAL_BALANCE.add(depositAmount), account.getCurrentBalance());
-        assertEquals(newBalance,account.getCurrentBalance());
+        // Act
+        account.setCurrentBalance(newBalance);
 
-        List<Transaction> transactions = account.getTransactionHistory();
-        assertEquals(2, transactions.size()); // Initial + deposit
-
-        Transaction depositTx = transactions.get(1);
-        assertEquals(TransactionType.DEPOSIT, depositTx.type());
-        assertEquals(depositAmount, depositTx.amount());
-        assertEquals(INITIAL_BALANCE, depositTx.balanceBefore());
-        assertEquals(INITIAL_BALANCE.add(depositAmount), depositTx.balanceAfter());
+        // Assert
+        assertEquals(newBalance, account.getCurrentBalance());
     }
 
+    /**
+     * Tests that the account status can be updated via the setter.
+     */
     @Test
-    void testDepositWithZeroAmount() {
-        assertThrows(InvalidAmountException.class, () -> {
-            account.deposit(BigDecimal.ZERO);
-        });
+    void testSetAccountStatus() {
+        // Act
+        account.setAccountStatus(AccountStatus.BLOCKED);
 
-        // Balance should remain unchanged
-        assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
-    }
-
-    @Test
-    void testDepositWithNegativeAmount() {
-        assertThrows(InvalidAmountException.class, () -> {
-            account.deposit(new BigDecimal("-50.00"));
-        });
-        assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
-    }
-
-    @Test
-    void testDepositOnBlockedAccount() throws Exception {
-        account.blockAccount();
+        // Assert
         assertEquals(AccountStatus.BLOCKED, account.getAccountStatus());
 
-        assertThrows(AccountBlockedException.class, () -> {
-            account.deposit(new BigDecimal("100.00"));
-        });
+        // Act: Change back to active
+        account.setAccountStatus(AccountStatus.ACTIVE);
 
-        assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
-    }
-
-    @Test
-    void testSuccessfulWithdrawal() throws Exception {
-        BigDecimal withdrawalAmount = new BigDecimal("200.00");
-        BigDecimal expectedBalance = INITIAL_BALANCE.subtract(withdrawalAmount);
-
-        BigDecimal actualBalance = account.withdraw(withdrawalAmount);
-
-        assertEquals(expectedBalance, actualBalance);
-        assertEquals(expectedBalance, account.getCurrentBalance());
-
-        // Verify transaction recorded
-        List<Transaction> transactions = account.getTransactionHistory();
-        assertEquals(2, transactions.size()); // Initial + withdrawal
-
-        Transaction withdrawalTx = transactions.get(1);
-        assertEquals(TransactionType.WITHDRAWAL, withdrawalTx.type());
-        assertEquals(withdrawalAmount, withdrawalTx.amount());
-        assertEquals(INITIAL_BALANCE, withdrawalTx.balanceBefore());
-        assertEquals(expectedBalance, withdrawalTx.balanceAfter());
-    }
-
-    @Test
-    void testWithdrawalWithInsufficientFunds() {
-        BigDecimal excessiveAmount = INITIAL_BALANCE.add(new BigDecimal("100.00"));
-
-        assertThrows(InsufficientFundsException.class, () -> {
-            account.withdraw(excessiveAmount);
-        });
-
-        assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
-    }
-
-    @Test
-    void testWithdrawalWithZeroAmount() {
-        assertThrows(InvalidAmountException.class, () -> {
-            account.withdraw(BigDecimal.ZERO);
-        });
-
-        assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
-    }
-
-    @Test
-    void testWithdrawalWithNegativeAmount() {
-        assertThrows(InvalidAmountException.class, () -> {
-            account.withdraw(new BigDecimal("-50.00"));
-        });
-
-        // Balance should remain unchanged
-        assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
-    }
-
-    @Test
-    void testWithdrawalOnBlockedAccount() throws Exception {
-        account.blockAccount();
-        assertEquals(AccountStatus.BLOCKED, account.getAccountStatus());
-
-        assertThrows(AccountBlockedException.class, () -> {
-            account.withdraw(new BigDecimal("100.00"));
-        });
-
-        assertEquals(INITIAL_BALANCE, account.getCurrentBalance());
-    }
-
-    @Test
-    void testBlockAndUnblockAccount() {
-        assertEquals(AccountStatus.ACTIVE, account.getAccountStatus());
-
-        account.blockAccount();
-        assertEquals(AccountStatus.BLOCKED, account.getAccountStatus());
-
-        account.activateAccount();
-        assertEquals(AccountStatus.ACTIVE, account.getAccountStatus());
-
-        account.blockAccount();
-        assertEquals(AccountStatus.BLOCKED, account.getAccountStatus());
-
-        account.activateAccount();
+        // Assert
         assertEquals(AccountStatus.ACTIVE, account.getAccountStatus());
     }
 
+    /**
+     * Tests that the transaction history returned by getTransactionHistory is immutable.
+     * Attempting to modify the returned list should throw an UnsupportedOperationException.
+     */
     @Test
-    void testTransactionHistoryIsUnmodifiable() throws Exception {
-        account.deposit(new BigDecimal("100.00"));
-
+    void testTransactionHistoryIsUnmodifiable() {
+        // Get initial transaction count (should be 1 for initial deposit)
         List<Transaction> history = account.getTransactionHistory();
-        int originalSize = history.size();
+        int initialSize = history.size();
+        assertEquals(1, initialSize, "Account should start with one transaction (initial deposit)");
 
-        assertThrows(UnsupportedOperationException.class, history::clear);
+        // Attempt to modify the list should fail
+        assertThrows(UnsupportedOperationException.class, () -> {
+            history.clear();
+        });
 
-        assertEquals(originalSize, account.getTransactionHistory().size());
+        assertThrows(UnsupportedOperationException.class, () -> {
+            history.add(new Transaction(
+                    "test", TransactionType.WITHDRAWAL, BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ONE, java.time.LocalDateTime.now()));
+        });
+
+        // Assert underlying data unchanged
+        assertEquals(initialSize, account.getTransactionHistory().size());
         assertFalse(account.getTransactionHistory().isEmpty());
     }
 
+    /**
+     * Tests that we can manually add transactions to the history.
+     * Note: Account starts with 1 transaction (initial deposit) when created with balance.
+     */
+    @Test
+    void testAddTransaction() {
+        // Account starts with 1 transaction (initial deposit from constructor)
+        int initialCount = account.getTransactionHistory().size();
+        assertEquals(1, initialCount);
+
+        // Add two transactions
+        Transaction depositTx = new Transaction(
+                "deposit-1", TransactionType.DEPOSIT, new BigDecimal("100.00"),
+                BigDecimal.ZERO, new BigDecimal("100.00"), java.time.LocalDateTime.now());
+        Transaction withdrawalTx = new Transaction(
+                "withdrawal-1", TransactionType.WITHDRAWAL, new BigDecimal("50.00"),
+                new BigDecimal("100.00"), new BigDecimal("50.00"), java.time.LocalDateTime.now());
+
+        account.addTransaction(depositTx);
+        account.addTransaction(withdrawalTx);
+
+        // Should now have 3 transactions total
+        List<Transaction> transactions = account.getTransactionHistory();
+        assertEquals(3, transactions.size());
+
+        // Verify the transactions we added are at the end
+        assertEquals(TransactionType.DEPOSIT, transactions.get(1).type());
+        assertEquals(new BigDecimal("100.00"), transactions.get(1).amount());
+        assertEquals(TransactionType.WITHDRAWAL, transactions.get(2).type());
+        assertEquals(new BigDecimal("50.00"), transactions.get(2).amount());
+    }
+
+    /**
+     * Tests adding transactions to an account with zero initial balance.
+     */
+    @Test
+    void testAddTransactionZeroBalanceAccount() {
+        // Create account with zero balance (should have 0 transactions initially)
+        Account zeroBalanceAccount = new Account(TEST_ACCOUNT_NUMBER, TEST_ACCOUNT_HOLDER);
+        assertEquals(0, zeroBalanceAccount.getTransactionHistory().size());
+
+        // Add a transaction
+        Transaction depositTx = new Transaction(
+                "deposit-1", TransactionType.DEPOSIT, new BigDecimal("100.00"),
+                BigDecimal.ZERO, new BigDecimal("100.00"), java.time.LocalDateTime.now());
+        zeroBalanceAccount.addTransaction(depositTx);
+
+        // Should now have 1 transaction
+        List<Transaction> transactions = zeroBalanceAccount.getTransactionHistory();
+        assertEquals(1, transactions.size());
+        assertEquals(TransactionType.DEPOSIT, transactions.get(0).type());
+        assertEquals(new BigDecimal("100.00"), transactions.get(0).amount());
+    }
 }
