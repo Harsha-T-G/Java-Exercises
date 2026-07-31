@@ -1,11 +1,11 @@
 package org.example;
 
-import org.example.services.BankingOperations;
+import org.example.service.BankingOperationService;
 import java.math.BigDecimal;
 import java.util.Scanner;
 public class Main {
 
-    private static final BankingOperations bankingOperations = new BankingOperations();
+    private static final BankingOperationService bankingOperations = new BankingOperationService();
     private static final Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {

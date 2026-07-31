@@ -1,4 +1,4 @@
-package org.example.services;
+package org.example.service;
 
 import org.example.exception.*;
 import org.example.models.Account;
@@ -6,19 +6,18 @@ import org.example.models.Transaction;
 import org.example.constants.AccountStatus;
 
 import java.math.BigDecimal;
-import java.util.List;
 
-public class BankingOperations {
+public class BankingOperationService {
 
-    private final AccountServices accountServices = new AccountServices();
+    private final AccountService accountService = new AccountService();
 
     public String createAccount(long accountNumber, String accountHolderName, BigDecimal initialBalance) {
         try {
             if (initialBalance == null) {
-                accountServices.createAccount(accountNumber, accountHolderName);
+                accountService.createAccount(accountNumber, accountHolderName);
                 return "Account created successfully with zero initial balance.";
             } else {
-                accountServices.createAccount(accountNumber, accountHolderName, initialBalance);
+                accountService.createAccount(accountNumber, accountHolderName, initialBalance);
                 return "Account created successfully with initial balance of " + initialBalance;
             }
         } catch (DuplicateAccountNumberException e) {
@@ -32,7 +31,7 @@ public class BankingOperations {
 
     public String deposit(long accountNumber, BigDecimal amount) {
         try {
-            BigDecimal newBalance = accountServices.deposit(accountNumber, amount);
+            BigDecimal newBalance = accountService.deposit(accountNumber, amount);
             return "Amount deposited successfully. New balance: " + newBalance;
         } catch (InvalidAmountException e) {
             return "Error: Deposit amount must be positive";
@@ -45,7 +44,7 @@ public class BankingOperations {
 
     public String withdraw(long accountNumber, BigDecimal amount) {
         try {
-            BigDecimal newBalance = accountServices.withdraw(accountNumber, amount);
+            BigDecimal newBalance = accountService.withdraw(accountNumber, amount);
             return "Amount withdrawn successfully. New balance: " + newBalance;
         } catch (InvalidAmountException e) {
             return "Error: Withdrawal amount must be positive";
@@ -60,7 +59,7 @@ public class BankingOperations {
 
     public String blockAccount(long accountNumber) {
         try {
-            accountServices.blockAccount(accountNumber);
+            accountService.blockAccount(accountNumber);
             return "Account successfully blocked.";
         } catch (IllegalArgumentException e) {
             return "Error: Account not found: " + accountNumber;
@@ -71,7 +70,7 @@ public class BankingOperations {
 
     public String activateAccount(long accountNumber) {
         try {
-            accountServices.activateAccount(accountNumber);
+            accountService.activateAccount(accountNumber);
             return "Account successfully activated.";
         } catch (IllegalArgumentException e) {
             if (e.getMessage().equals("Account not found: ")) {
@@ -86,7 +85,7 @@ public class BankingOperations {
 
     public String checkBalance(long accountNumber) {
         try {
-            BigDecimal balance = accountServices.getBalance(accountNumber);
+            BigDecimal balance = accountService.getBalance(accountNumber);
             return "Current balance: " + balance;
         } catch (IllegalArgumentException e) {
             return "Error: Account not found: " + accountNumber;
@@ -95,7 +94,7 @@ public class BankingOperations {
 
     public String getTransactionHistory(long accountNumber) {
         try {
-            Account account = accountServices.getAccountDetails(accountNumber);
+            Account account = accountService.getAccountDetails(accountNumber);
             java.util.List<Transaction> history = account.getTransactionHistory();
             if (history.isEmpty()) {
                 return "No transaction history found for account " + accountNumber +
@@ -120,7 +119,7 @@ public class BankingOperations {
 
     public String getAccountHolderName(long accountNumber) {
         try {
-            Account account = accountServices.getAccountDetails(accountNumber);
+            Account account = accountService.getAccountDetails(accountNumber);
             return "Account holder: " + account.getAccountHolderName();
         } catch (IllegalArgumentException e) {
             return "Error: Account not found: " + accountNumber;
@@ -129,7 +128,7 @@ public class BankingOperations {
 
     public String getAccountStatus(long accountNumber) {
         try {
-            AccountStatus status = accountServices.getAccountStatus(accountNumber);
+            AccountStatus status = accountService.getAccountStatus(accountNumber);
             return "Account status: " + status;
         } catch (IllegalArgumentException e) {
             return "Error: Account not found: " + accountNumber;

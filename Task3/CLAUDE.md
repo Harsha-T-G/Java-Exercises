@@ -130,21 +130,22 @@ Based on the review, the following improvements were made:
    - Other `System.out.println` calls are for simple prompts and results, which are acceptable for a console application.
 
 3. **Moved Try/Catch Blocks to Service Layer**:  
-   - Created a new facade class `BankingOperations` in the `org.example.services` package.  
+   - Created a new facade class `BankingOperations` in the `org.example.service` package.  
    - This class catches checked exceptions from `AccountServices` and returns user‑friendly result messages.  
    - The `Main` class now only collects user input and calls methods on `BankingOperations`, which handle errors internally and return appropriate messages or values, keeping `Main` free of try/catch blocks.
 
 4. **Enhanced JUnit Test Comments**:  
-   - Added descriptive Javadoc comments and inline comments to test classes (`AccountTest.java` and `AccountServicesTest.java`) explaining what each test verifies, the scenario, and the expected outcome.  
-   - No comments were added to service or main classes; focus remained on test documentation only.  
-   - Structured tests with clear Arrange/Act/Assert methodology in comments.  
+   - Updated test method names to follow given_when_then convention for better readability.  
+   - Removed extra comments from unit tests; only Assert, Act, Arrange comments are retained where needed for clarity.  
+   - No comments were added to service or main classes; focus remained on essential test documentation only.  
+   - Structured tests with clear given_when_then naming and Arrange/Act/Assert methodology.  
    - Separated concerns: `AccountTest` focuses on the account as a data container (construction, field modifications, immutability), while `AccountServicesTest` tests all business logic operations.
 
 These changes improve adherence to object‑oriented principles, separation of concerns, and code readability while still satisfied:
 - `<em>Data Logic shouldn't be defined in the model classes</em>` → **Satisfied**: All business logic is now in `AccountServices`.
 - `<em>System.out.println is used many times...</em>` → **Addressed**: Used `StringBuilder` for the menu in `Main.java`.
 - `<em>Main class should be like only it need to take inputs...</em>` → **Satisfied**: `Main` handles only I/O; `BankingOperations` handles interactions and exceptions.
-- `<em>Can we add the Junit comments for the test cases...</em>` → **Satisfied**: Both test classes now have detailed Javadoc comments and inline comments explaining test steps.
+- `<em>Can we add the Junit comments for the test cases...</em>` → **Addressed**: Test classes now use given_when_then naming with minimal Assert/Act/Arrange comments only where needed.
 
 ## How to Run the Application
 

@@ -1,4 +1,4 @@
-package org.example.services;
+package org.example.service;
 
 import org.example.exception.*;
 import org.example.models.Account;
@@ -12,11 +12,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class AccountServices {
+public class AccountService {
 
     private final Map<Long, Account> accounts;
 
-    public AccountServices() {
+    public AccountService() {
         this.accounts = new HashMap<>();
     }
 
