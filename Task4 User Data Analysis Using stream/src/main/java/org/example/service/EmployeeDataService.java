@@ -1,4 +1,4 @@
-package org.example.sevice;
+package org.example.service;
 
 import org.example.model.Employee;
 

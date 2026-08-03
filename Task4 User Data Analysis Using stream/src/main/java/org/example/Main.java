@@ -1,7 +1,7 @@
 package org.example;
 
 import org.example.model.Employee;
-import org.example.sevice.EmployeeDataService;
+import org.example.service.EmployeeDataService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

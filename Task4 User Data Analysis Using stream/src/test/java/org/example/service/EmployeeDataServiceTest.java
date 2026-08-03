@@ -1,4 +1,4 @@
-package org.example;
+package org.example.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.example.model.Employee;
-import org.example.sevice.EmployeeDataService;
+import org.example.SampleData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
