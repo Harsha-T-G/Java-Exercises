@@ -1,0 +1,8 @@
+org/example/service/OrderProcessingServiceTest.class
+org/example/pipeline/PositiveAmountPredicateTest.class
+org/example/pipeline/RegularCustomerDiscountTest.class
+org/example/pipeline/CorporateCustomerDiscountTest.class
+org/example/pipeline/DiscountPipelineTest.class
+org/example/pipeline/PremiumCustomerDiscountTest.class
+org/example/pipeline/PositiveItemCountPredicateTest.class
+org/example/pipeline/IdNotNullPredicateTest.class
