@@ -6,9 +6,11 @@ import java.math.BigDecimal;
 import java.util.function.Function;
 
 public class CorporateCustomerDiscount implements Function<Order, BigDecimal> {
+    private static final PercentageCustomerDiscount DELEGATE =
+            new PercentageCustomerDiscount(new BigDecimal("0.15"));
+
     @Override
     public BigDecimal apply(Order order) {
-        // Corporate customers get 15% discount
-        return order.amount().multiply(new BigDecimal("0.15"));
+        return DELEGATE.apply(order);
     }
 }

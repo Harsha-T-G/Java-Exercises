@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 public class Main {
-   static void main() {
+    public static void main(String[] args) {
         System.out.println("=== Functional Discount and Validation Pipeline Demo ===\n");
 
 
@@ -62,7 +62,7 @@ public class Main {
 
         try {
             orderProcessingService.processOrder(invalidOrder);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             System.out.println("Order rejected as expected: " + e.getMessage());
         }
 
@@ -80,7 +80,7 @@ public class Main {
             if (order.couponCode().isPresent()) {
                 System.out.println("  Coupon Applied: " + order.couponCode().get());
             }
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             System.out.println("  Error processing order: " + e.getMessage());
         }
     }

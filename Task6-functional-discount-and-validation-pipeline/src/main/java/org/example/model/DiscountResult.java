@@ -21,14 +21,8 @@ public record DiscountResult(BigDecimal originalAmount, BigDecimal discountAmoun
         if (this.discountAmount.compareTo(this.originalAmount) > 0) {
             throw new IllegalArgumentException("Discount amount cannot exceed original amount");
         }
-    }
-
-    @Override
-    public String toString() {
-        return "DiscountResult{" +
-                "originalAmount=" + originalAmount +
-                ", discountAmount=" + discountAmount +
-                ", finalAmount=" + finalAmount +
-                '}';
+        if (this.originalAmount.subtract(this.discountAmount).compareTo(this.finalAmount) != 0) {
+            throw new IllegalArgumentException("Final amount must equal original amount minus discount amount");
+        }
     }
 }

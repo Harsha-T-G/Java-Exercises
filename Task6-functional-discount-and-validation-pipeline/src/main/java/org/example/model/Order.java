@@ -13,15 +13,4 @@ public record Order(String id, CustomerType customerType, BigDecimal amount, int
         this.itemCount = itemCount;
         this.couponCode = Objects.requireNonNullElseGet(couponCode, Optional::empty);
     }
-
-    @Override
-    public String toString() {
-        return "Order{" +
-                "id='" + id + '\'' +
-                ", customerType=" + customerType +
-                ", amount=" + amount +
-                ", itemCount=" + itemCount +
-                ", couponCode=" + couponCode +
-                '}';
-    }
 }

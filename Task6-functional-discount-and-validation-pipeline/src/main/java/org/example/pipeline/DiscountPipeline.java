@@ -15,6 +15,9 @@ public class DiscountPipeline {
 
     public static Predicate<Order> combineAnd(List<Predicate<Order>> predicates) {
         Objects.requireNonNull(predicates, "Predicates list cannot be null");
+        if (predicates.stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException("Predicates list cannot contain null");
+        }
         return order -> predicates.stream().allMatch(predicate -> predicate.test(order));
     }
 
@@ -41,6 +44,9 @@ public class DiscountPipeline {
 
         if (couponDiscount.isPresent()) {
             BigDecimal couponValue = couponDiscount.get();
+            if (couponValue.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Coupon discount cannot be negative");
+            }
             // Ensure coupon discount doesn't make amount negative
             BigDecimal finalAmount = amountAfterCustomerDiscount.subtract(couponValue);
             // Preserve the scale of the amount when comparing with zero
@@ -69,32 +75,28 @@ public class DiscountPipeline {
         Objects.requireNonNull(validationPredicates, "Validation predicates list cannot be null");
         Objects.requireNonNull(couponDiscount, "Coupon discount optional cannot be null");
 
-        // Combine all validation predicates with AND logic
-        Predicate<Order> combinedValidator = combineAnd(validationPredicates);
-        if (!combinedValidator.test(order)) {
-            throw new IllegalStateException("Order validation failed");
-        }
+        validate(order, validationPredicates);
 
-        // Apply customer-specific discount
         BigDecimal customerDiscount = applyCustomerDiscount(order, regularDiscount, premiumDiscount, corporateDiscount);
         BigDecimal amountAfterCustomerDiscount = order.amount().subtract(customerDiscount);
-
-        // Apply coupon discount if present
         BigDecimal finalAmount = applyCouponDiscount(amountAfterCustomerDiscount, couponDiscount);
-
-        // Calculate total discount amount
         BigDecimal totalDiscount = calculateDiscountAmount(order.amount(), finalAmount);
-
-        // Return immutable result
-        // Apply appropriate scaling based on whether coupon is present:
-        // - No coupon: match input scale (for consistency with display expectations)
-        // - With coupon: use 4 decimal places (for calculation precision)
-        int scale = couponDiscount.isPresent() ? 4 : order.amount().scale();
+        int scale = order.amount().scale();
 
         return new DiscountResult(
-                order.amount(), // Keep original scale for original amount
+                order.amount(),
                 totalDiscount.setScale(scale, RoundingMode.HALF_UP),
                 finalAmount.setScale(scale, RoundingMode.HALF_UP)
         );
+    }
+
+    private static void validate(Order order, List<Predicate<Order>> validationPredicates) {
+        validationPredicates.stream()
+                .filter(predicate -> !predicate.test(order))
+                .findFirst()
+                .ifPresent(predicate -> {
+                    throw new IllegalStateException(
+                            "Order validation failed: " + predicate.getClass().getSimpleName());
+                });
     }
 }

@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -59,15 +58,10 @@ class DiscountPipelineTest {
     }
 
     private static List<Predicate<Order>> getPredicates() {
-        List<IdNotNullPredicate> idPredicates = List.of(new IdNotNullPredicate());
-        List<PositiveAmountPredicate> amountPredicates = List.of(new PositiveAmountPredicate());
-        List<PositiveItemCountPredicate> itemPredicates = List.of(new PositiveItemCountPredicate());
-
-        List<Predicate<Order>> validationPredicates = new ArrayList<>();
-        validationPredicates.addAll(idPredicates);
-        validationPredicates.addAll(amountPredicates);
-        validationPredicates.addAll(itemPredicates);
-        return validationPredicates;
+        return List.of(
+                new IdPresentPredicate(),
+                new PositiveAmountPredicate(),
+                new PositiveItemCountPredicate());
     }
 
     @Test
@@ -82,7 +76,7 @@ class DiscountPipelineTest {
         );
 
         List<java.util.function.Predicate<Order>> validationPredicates = List.of(
-                new IdNotNullPredicate(),
+                new IdPresentPredicate(),
                 new PositiveAmountPredicate(),
                 new PositiveItemCountPredicate()
         );
@@ -103,8 +97,8 @@ class DiscountPipelineTest {
         // Coupon: 10.00 flat
         // Total discount: 20.0000
         // Final amount: 80.0000
-        assertEquals(new BigDecimal("20.0000"), result.discountAmount());
-        assertEquals(new BigDecimal("80.0000"), result.finalAmount());
+        assertEquals(new BigDecimal("20.00"), result.discountAmount());
+        assertEquals(new BigDecimal("80.00"), result.finalAmount());
     }
 
     @Test
@@ -119,7 +113,7 @@ class DiscountPipelineTest {
         );
 
         List<java.util.function.Predicate<Order>> validationPredicates = List.of(
-                new IdNotNullPredicate(),
+                new IdPresentPredicate(),
                 new PositiveAmountPredicate(),
                 new PositiveItemCountPredicate()
         );
@@ -141,8 +135,8 @@ class DiscountPipelineTest {
         // Coupon: $60.00 but limited to 42.5000 (can't go below zero)
         // Final amount: 0.0000
         // Total discount: 50.0000
-        assertEquals(new BigDecimal("0.0000"), result.finalAmount());
-        assertEquals(new BigDecimal("50.0000"), result.discountAmount());
+        assertEquals(new BigDecimal("0.00"), result.finalAmount());
+        assertEquals(new BigDecimal("50.00"), result.discountAmount());
     }
 
     @Test
@@ -156,12 +150,12 @@ class DiscountPipelineTest {
         );
 
         List<java.util.function.Predicate<Order>> validationPredicates = List.of(
-                new IdNotNullPredicate(),
+                new IdPresentPredicate(),
                 new PositiveAmountPredicate(),
                 new PositiveItemCountPredicate()
         );
 
-        assertThrows(IllegalStateException.class, () ->
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
                 pipeline.processOrder(
                         order,
                         regularDiscount,
@@ -171,12 +165,13 @@ class DiscountPipelineTest {
                         Optional.empty()
                 )
         );
+        assertEquals("Order validation failed: IdPresentPredicate", exception.getMessage());
     }
 
     @Test
     void givenValidPredicatesList_whenCombiningWithAnd_thenReturnsCorrectCombinedPredicate() {
         List<java.util.function.Predicate<Order>> predicates = List.of(
-                new IdNotNullPredicate(),
+                new IdPresentPredicate(),
                 new PositiveAmountPredicate(),
                 new PositiveItemCountPredicate()
         );
@@ -210,5 +205,27 @@ class DiscountPipelineTest {
         assertTrue(combined.test(validOrder));
         assertFalse(combined.test(invalidIdOrder));
         assertFalse(combined.test(invalidAmountOrder));
+    }
+
+    @Test
+    void givenNegativeCoupon_whenApplyingCoupon_thenRejectsMalformedDiscount() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                DiscountPipeline.applyCouponDiscount(
+                        new BigDecimal("95.00"), Optional.of(new BigDecimal("-5.00"))));
+
+        assertEquals("Coupon discount cannot be negative", exception.getMessage());
+    }
+
+    @Test
+    void givenNullArguments_whenCallingPipelineHelpers_thenFailFastWithBoundaryMessages() {
+        assertEquals("Predicates list cannot be null",
+                assertThrows(NullPointerException.class,
+                        () -> DiscountPipeline.combineAnd(null)).getMessage());
+        assertEquals("Coupon discount optional cannot be null",
+                assertThrows(NullPointerException.class,
+                        () -> DiscountPipeline.applyCouponDiscount(BigDecimal.TEN, null)).getMessage());
+        assertEquals("Amount after customer discount cannot be null",
+                assertThrows(NullPointerException.class,
+                        () -> DiscountPipeline.applyCouponDiscount(null, Optional.empty())).getMessage());
     }
 }

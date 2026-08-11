@@ -50,8 +50,8 @@ class OrderProcessingServiceTest {
         DiscountResult result = service.processOrder(order);
 
         assertEquals(new BigDecimal("100.00"), result.originalAmount());
-        assertEquals(new BigDecimal("14.5000"), result.discountAmount());
-        assertEquals(new BigDecimal("85.5000"), result.finalAmount()); // 100 - 14.5
+        assertEquals(new BigDecimal("14.50"), result.discountAmount());
+        assertEquals(new BigDecimal("85.50"), result.finalAmount()); // 100 - 14.5
     }
 
     @Test
@@ -84,8 +84,8 @@ class OrderProcessingServiceTest {
         DiscountResult result = service.processOrder(order);
 
         assertEquals(new BigDecimal("150.00"), result.originalAmount());
-        assertEquals(new BigDecimal("35.2500"), result.discountAmount());
-        assertEquals(new BigDecimal("114.7500"), result.finalAmount()); // 150 - 35.25
+        assertEquals(new BigDecimal("48.00"), result.discountAmount());
+        assertEquals(new BigDecimal("102.00"), result.finalAmount()); // 15% tier, then 20% coupon
     }
 
     @Test
@@ -104,7 +104,7 @@ class OrderProcessingServiceTest {
     }
 
     @Test
-    void givenRegularCustomer_withAmount50_andLargeCoupon_whenProcessingOrder_thenReturnsCorrectDiscount() {
+    void givenUnknownCoupon_whenProcessingOrder_thenRejectsCoupon() {
         Order order = new Order(
                 "127",
                 CustomerType.REGULAR,
@@ -113,11 +113,9 @@ class OrderProcessingServiceTest {
                 Optional.of("BIGSAVE")
         );
 
-        DiscountResult result = service.processOrder(order);
-
-        assertEquals(new BigDecimal("50.00"), result.originalAmount());
-        assertEquals(new BigDecimal("7.2500"), result.discountAmount());
-        assertEquals(new BigDecimal("42.7500"), result.finalAmount());
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class, () -> service.processOrder(order));
+        assertEquals("Unknown coupon code: BIGSAVE", exception.getMessage());
     }
 
     @Test
@@ -136,5 +134,33 @@ class OrderProcessingServiceTest {
         assertEquals(new BigDecimal("80.00"), result.originalAmount());
         assertEquals(new BigDecimal("8.00"), result.discountAmount()); // 10% of 80
         assertEquals(new BigDecimal("72.00"), result.finalAmount()); // 80 - 8
+    }
+
+    @Test
+    void givenCorporateCustomer_withFree20Coupon_whenProcessingOrder_thenAppliesTwentyDollarCoupon() {
+        Order order = new Order("129", CustomerType.CORPORATE, new BigDecimal("150.00"), 2,
+                Optional.of("FREE20"));
+
+        DiscountResult result = service.processOrder(order);
+
+        assertEquals(new BigDecimal("42.50"), result.discountAmount());
+        assertEquals(new BigDecimal("107.50"), result.finalAmount());
+    }
+
+    @Test
+    void givenNullOrder_whenProcessingOrder_thenFailsAtServiceBoundary() {
+        NullPointerException exception = assertThrows(
+                NullPointerException.class, () -> service.processOrder(null));
+        assertEquals("Order cannot be null", exception.getMessage());
+    }
+
+    @Test
+    void givenNullCouponOptional_whenUsingExplicitOverload_thenFailsAtServiceBoundary() {
+        Order order = new Order("130", CustomerType.REGULAR, new BigDecimal("20.00"), 1,
+                Optional.empty());
+
+        NullPointerException exception = assertThrows(
+                NullPointerException.class, () -> service.processOrder(order, null));
+        assertEquals("Coupon code cannot be null", exception.getMessage());
     }
 }
