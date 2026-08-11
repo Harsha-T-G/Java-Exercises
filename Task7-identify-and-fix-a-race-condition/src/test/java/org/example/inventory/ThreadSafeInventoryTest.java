@@ -28,10 +28,15 @@ class ThreadSafeInventoryTest {
 
     @ParameterizedTest
     @MethodSource("implementations")
-    void finalStockIsCorrect(IntFunction<StockInventory> factory) throws Exception {
+    void givenSufficientStock_whenConcurrentReductionsFinish_thenFinalStockIsCorrect(
+            IntFunction<StockInventory> factory) throws Exception {
+        // Given
         StockInventory inventory = factory.apply(1_000);
+
+        // When
         RunResult result = runConcurrently(inventory);
 
+        // Then
         assertEquals(500, result.successfulReductions());
         assertEquals(500, inventory.getStock());
         assertTrue(result.executorTerminated());
@@ -39,20 +44,29 @@ class ThreadSafeInventoryTest {
 
     @ParameterizedTest
     @MethodSource("implementations")
-    void stockCannotBecomeNegative(IntFunction<StockInventory> factory) throws Exception {
+    void givenInsufficientStock_whenConcurrentReductionsRun_thenStockNeverBecomesNegative(
+            IntFunction<StockInventory> factory) throws Exception {
+        // Given
         StockInventory inventory = factory.apply(100);
+
+        // When
         RunResult result = runConcurrently(inventory);
 
+        // Then
         assertEquals(100, result.successfulReductions());
         assertEquals(0, inventory.getStock());
         assertTrue(result.executorTerminated());
     }
 
     @RepeatedTest(10)
-    void selectedAtomicImplementationRemainsCorrectAcrossRepeatedRuns() throws Exception {
+    void givenAtomicInventory_whenConcurrencyTestIsRepeated_thenResultRemainsCorrect() throws Exception {
+        // Given
         AtomicInventory inventory = new AtomicInventory(1_000);
+
+        // When
         RunResult result = runConcurrently(inventory);
 
+        // Then
         assertEquals(500, result.successfulReductions());
         assertEquals(500, inventory.getStock());
         assertTrue(result.executorTerminated());
