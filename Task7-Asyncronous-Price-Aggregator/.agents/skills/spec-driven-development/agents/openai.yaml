@@ -1,0 +1,3 @@
+interface:
+  display_name: "Spec-driven development"
+  short_description: "Define behavior contracts before implementation"

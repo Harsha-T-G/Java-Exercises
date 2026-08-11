@@ -12,6 +12,9 @@ public class Main {
     public static void main(String[] args) {
         OrderReportService reportService = new OrderReportService();
 
+
+
+
         // Create sample orders
         List<Order> orders = Arrays.asList(
                 new Order("1", "C1", "Electronics", new BigDecimal("1500.00"), OrderStatus.COMPLETED, LocalDate.of(2026, 1, 15)),

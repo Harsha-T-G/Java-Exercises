@@ -1,0 +1,3 @@
+interface:
+  display_name: "Verify feature readiness"
+  short_description: "Check spec, build, lifecycle, and repository hygiene"

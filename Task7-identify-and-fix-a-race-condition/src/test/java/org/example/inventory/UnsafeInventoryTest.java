@@ -10,7 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class UnsafeInventoryTest {
     private static final int INITIAL_STOCK = 1_000;
@@ -19,12 +19,17 @@ class UnsafeInventoryTest {
     private static final int EXPECTED_STOCK = 500;
 
     @Test
-    void demonstratesLostUpdates() throws Exception {
+    void givenUnsafeInventory_whenConcurrentReductionsRun_thenLostUpdatesAreObserved() throws Exception {
+        // Given
         boolean raceObserved = false;
+
+        // When: repeat because thread scheduling makes race-condition reproduction probabilistic.
         for (int attempt = 0; attempt < 10 && !raceObserved; attempt++) {
             raceObserved = runTasks(new UnsafeInventory(INITIAL_STOCK)) != EXPECTED_STOCK;
         }
-        assertNotEquals(false, raceObserved, "The deliberately widened race should lose updates");
+
+        // Then
+        assertTrue(raceObserved, "The deliberately widened race should lose updates");
     }
 
     private int runTasks(UnsafeInventory inventory) throws Exception {
