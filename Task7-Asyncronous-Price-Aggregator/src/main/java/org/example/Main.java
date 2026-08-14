@@ -3,16 +3,14 @@ package org.example;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
-import org.example.price.PriceComparisonResult;
-import org.example.price.PriceComparisonService;
-import org.example.price.PriceProvider;
-import org.example.price.ProviderBehavior;
-import org.example.price.ProviderResult;
-import org.example.price.SimulatedPriceProvider;
+import org.example.price.domain.PriceComparisonResult;
+import org.example.price.domain.PriceProvider;
+import org.example.price.domain.ProviderResult;
+import org.example.price.provider.ProviderBehavior;
+import org.example.price.provider.SimulatedPriceProvider;
+import org.example.price.service.PriceComparisonService;
 
 public final class Main {
-    private Main() {
-    }
 
     public static void main(String[] args) {
         List<PriceProvider> providers = List.of(
@@ -24,7 +22,10 @@ public final class Main {
                         Duration.ofMillis(350), ProviderBehavior.SUCCESS),
                 new SimulatedPriceProvider(
                         "UnstableMarket", new BigDecimal("89.00"),
-                        Duration.ofMillis(200), ProviderBehavior.FAILURE));
+                        Duration.ofMillis(200), ProviderBehavior.FAILURE),
+               new SimulatedPriceProvider(
+                        "TimeOutBuy", new BigDecimal("29.99"),
+                        Duration.ofMillis(600), ProviderBehavior.SUCCESS));
 
         try (PriceComparisonService service = new PriceComparisonService(
                 providers, Duration.ofMillis(500))) {

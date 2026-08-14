@@ -15,6 +15,25 @@ without one provider failing the complete request. The service then selects the 
 The service owns its executor, including an executor supplied through the testing/configuration
 constructor, and implements `AutoCloseable` for deterministic cleanup.
 
+## Project structure
+
+```text
+src/main/java/org/example
+├── Main.java                         application entry point
+└── price
+    ├── domain                        contracts and immutable result values
+    ├── exception                     comparison-specific exceptions
+    ├── provider                      simulated provider implementations
+    └── service                       asynchronous orchestration
+
+src/test/java/org/example/price
+└── service                           Given-When-Then service tests
+```
+
+This is a plain Java project, so it uses only meaningful packages. Spring-specific layers such as
+`controller`, `repository`, `dto`, and `config` are intentionally omitted because no REST or
+database capability exists.
+
 ## Run
 
 ```bash
@@ -33,5 +52,9 @@ The JUnit suite covers:
 - every provider failing or timing out;
 - latch-based proof that all provider calls overlap;
 - executor shutdown on service close.
+
+Tests use Given-When-Then naming and visibly separated phases. The concurrency scenario includes
+focused comments explaining its latch coordination; straightforward assertions are not
+over-commented.
 
 See [`docs/specs/price-comparison.md`](docs/specs/price-comparison.md) for the complete contract.

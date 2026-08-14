@@ -10,4 +10,7 @@
 - Convert expected provider failures into explicit outcomes before aggregating futures.
 - Tests must be deterministic. Use latches or barriers to prove concurrency; use generous timing
   bounds only as supporting assertions.
+- Structure every test as Given-When-Then, keep each phase visibly separated, and test one
+  scenario per method. Use phase comments when helpful and explanatory comments for complex
+  coordination or multi-stage setup; do not comment obvious code.
 - Name tests by observable behavior and include failure-path and resource-lifecycle coverage.
