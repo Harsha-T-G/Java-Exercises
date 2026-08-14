@@ -1,8 +1,0 @@
-/Users/harsh01/TASKS/Task6-functional-discount-and-validation-pipeline/src/test/java/org/example/pipeline/CorporateCustomerDiscountTest.java
-/Users/harsh01/TASKS/Task6-functional-discount-and-validation-pipeline/src/test/java/org/example/pipeline/DiscountPipelineTest.java
-/Users/harsh01/TASKS/Task6-functional-discount-and-validation-pipeline/src/test/java/org/example/pipeline/IdNotNullPredicateTest.java
-/Users/harsh01/TASKS/Task6-functional-discount-and-validation-pipeline/src/test/java/org/example/pipeline/PositiveAmountPredicateTest.java
-/Users/harsh01/TASKS/Task6-functional-discount-and-validation-pipeline/src/test/java/org/example/pipeline/PositiveItemCountPredicateTest.java
-/Users/harsh01/TASKS/Task6-functional-discount-and-validation-pipeline/src/test/java/org/example/pipeline/PremiumCustomerDiscountTest.java
-/Users/harsh01/TASKS/Task6-functional-discount-and-validation-pipeline/src/test/java/org/example/pipeline/RegularCustomerDiscountTest.java
-/Users/harsh01/TASKS/Task6-functional-discount-and-validation-pipeline/src/test/java/org/example/service/OrderProcessingServiceTest.java
