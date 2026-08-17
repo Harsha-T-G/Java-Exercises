@@ -8,8 +8,10 @@
         <outputRelativeToContentRoot value="true" />
         <module name="Task12-Course-Enrollment" />
         <module name="Task13-Batch-Transcation-Processor" />
-        <module name="Task9-Producer-Consumer-Task-Processor" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="Task9-Producer-Consumer-Task-Processor" target="17" />
+    </bytecodeTargetLevel>
   </component>
 </project>

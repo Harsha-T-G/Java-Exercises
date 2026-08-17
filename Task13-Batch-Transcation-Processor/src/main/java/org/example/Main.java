@@ -27,7 +27,7 @@ public class Main {
 
         System.out.println("Successful transaction IDs: "
                 + result.successfulTransactionIds());
-        System.out.println("Failures:");
+        System.out.println("Failures: ");
         result.failures().forEach(failure -> System.out.println(
                 failure.transactionId() + " - " + failure.failureType()
                         + ": " + failure.failureMessage()));
