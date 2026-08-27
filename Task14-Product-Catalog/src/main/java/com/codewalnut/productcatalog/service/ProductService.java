@@ -38,7 +38,7 @@ public class ProductService {
             throw new DuplicateSkuException(request.getSku());
         }
         UUID id = UUID.randomUUID();
-        Product product = productMapper.toNewProduct(request, id);
+        Product product = productMapper.toProduct(id, request);
         Product saved = productRepository.save(product);
         return productMapper.toResponse(saved);
     }
@@ -70,7 +70,7 @@ public class ProductService {
         if (productRepository.existsBySkuIgnoreCaseExcludingId(request.getSku(), id)) {
             throw new DuplicateSkuException(request.getSku());
         }
-        Product updated = productMapper.toUpdatedProduct(id, request);
+        Product updated = productMapper.toProduct(id, request);
         Product saved = productRepository.save(updated);
         return productMapper.toResponse(saved);
     }
