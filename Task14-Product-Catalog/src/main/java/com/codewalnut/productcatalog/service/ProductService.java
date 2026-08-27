@@ -1,8 +1,10 @@
 package com.codewalnut.productcatalog.service;
 
+import com.codewalnut.productcatalog.config.CatalogProperties;
 import com.codewalnut.productcatalog.dto.ProductRequest;
 import com.codewalnut.productcatalog.dto.ProductResponse;
 import com.codewalnut.productcatalog.exception.DuplicateSkuException;
+import com.codewalnut.productcatalog.exception.ProductLimitReachedException;
 import com.codewalnut.productcatalog.exception.ProductNotFoundException;
 import com.codewalnut.productcatalog.mapper.ProductMapper;
 import com.codewalnut.productcatalog.model.Product;
@@ -17,24 +19,41 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
+    private final CatalogProperties catalogProperties;
 
-    public ProductService(ProductRepository productRepository, ProductMapper productMapper) {
+    public ProductService(
+            ProductRepository productRepository,
+            ProductMapper productMapper,
+            CatalogProperties catalogProperties) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
+        this.catalogProperties = catalogProperties;
     }
 
     public ProductResponse create(ProductRequest request) {
+        if (productRepository.count() >= catalogProperties.getMaximumProducts()) {
+            throw new ProductLimitReachedException(catalogProperties.getMaximumProducts());
+        }
         if (productRepository.existsBySkuIgnoreCase(request.getSku())) {
             throw new DuplicateSkuException(request.getSku());
         }
         UUID id = UUID.randomUUID();
-        Product product = productMapper.toNewProduct(request, id);
+        Product product = productMapper.toProduct(id, request);
         Product saved = productRepository.save(product);
         return productMapper.toResponse(saved);
     }
 
     public List<ProductResponse> findAll() {
         return productRepository.findAll().stream()
+                .map(productMapper::toResponse)
+                .toList();
+    }
+
+    public List<ProductResponse> findLowStock() {
+        int threshold = catalogProperties.getLowStockThreshold();
+        return productRepository.findAll().stream()
+                .filter(Product::isActive)
+                .filter(product -> product.getStockQuantity() <= threshold)
                 .map(productMapper::toResponse)
                 .toList();
     }
@@ -51,7 +70,7 @@ public class ProductService {
         if (productRepository.existsBySkuIgnoreCaseExcludingId(request.getSku(), id)) {
             throw new DuplicateSkuException(request.getSku());
         }
-        Product updated = productMapper.toUpdatedProduct(id, request);
+        Product updated = productMapper.toProduct(id, request);
         Product saved = productRepository.save(updated);
         return productMapper.toResponse(saved);
     }
