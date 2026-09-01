@@ -3,6 +3,7 @@ package com.codewalnut.productcatalog.service;
 import com.codewalnut.productcatalog.dto.ProductRequest;
 import com.codewalnut.productcatalog.dto.ProductResponse;
 import com.codewalnut.productcatalog.dto.StockAdjustmentRequest;
+import com.codewalnut.productcatalog.entity.ProductEntity;
 import com.codewalnut.productcatalog.exception.DuplicateSkuException;
 import com.codewalnut.productcatalog.exception.InsufficientStockException;
 import com.codewalnut.productcatalog.exception.ProductLimitReachedException;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
@@ -127,6 +129,20 @@ class ProductServiceIntegrationTest extends PostgreSqlTestSupport {
     @Test
     void givenMissingProduct_whenFindById_thenThrowsProductNotFoundException() {
         assertThrows(ProductNotFoundException.class, () -> productService.findById(UUID.randomUUID()));
+    }
+
+    @Test
+    void givenStaleVersion_whenSecondSaveCommits_thenThrowsOptimisticLockingFailureException() {
+        ProductResponse created = productService.create(validRequest("OPT-001"));
+        ProductEntity current = productRepository.findById(created.getId()).orElseThrow();
+        ProductEntity stale = productRepository.findById(created.getId()).orElseThrow();
+
+        current.applyRequestFields(
+                current.getSku(), "Updated", current.getCategory(), current.getPrice(), current.getStockQuantity(), true);
+        productRepository.saveAndFlush(current);
+
+        stale.adjustStockBy(-1);
+        assertThrows(ObjectOptimisticLockingFailureException.class, () -> productRepository.saveAndFlush(stale));
     }
 
     private ProductRequest validRequest(String sku) {

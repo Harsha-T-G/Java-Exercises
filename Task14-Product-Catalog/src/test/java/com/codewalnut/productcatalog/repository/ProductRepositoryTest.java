@@ -63,6 +63,22 @@ class ProductRepositoryTest extends PostgreSqlTestSupport {
     }
 
     @Test
+    void givenNonPositivePrice_whenSave_thenThrowsDataIntegrityViolationException() {
+        ProductEntity invalidPrice = new ProductEntity(
+                UUID.randomUUID(), "PRICE-1", "Bad", "General", new BigDecimal("0.00"), 1, true);
+
+        assertThrows(DataIntegrityViolationException.class, () -> productRepository.saveAndFlush(invalidPrice));
+    }
+
+    @Test
+    void givenNegativeStock_whenSave_thenThrowsDataIntegrityViolationException() {
+        ProductEntity invalidStock = new ProductEntity(
+                UUID.randomUUID(), "STOCK-1", "Bad", "General", new BigDecimal("1.00"), -1, true);
+
+        assertThrows(DataIntegrityViolationException.class, () -> productRepository.saveAndFlush(invalidStock));
+    }
+
+    @Test
     void givenProductsWithDifferentCategories_whenFindByCategoryIgnoreCase_thenReturnsMatches() {
         // Arrange
         productRepository.save(newProduct(UUID.randomUUID(), "SKU-A", "A", "Electronics", 5));

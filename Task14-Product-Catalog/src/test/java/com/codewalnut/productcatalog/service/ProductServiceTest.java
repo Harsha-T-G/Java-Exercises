@@ -4,19 +4,22 @@ import com.codewalnut.productcatalog.config.CatalogProperties;
 import com.codewalnut.productcatalog.dto.ProductPageResponse;
 import com.codewalnut.productcatalog.dto.ProductRequest;
 import com.codewalnut.productcatalog.dto.ProductResponse;
+import com.codewalnut.productcatalog.dto.StockAdjustmentRequest;
 import com.codewalnut.productcatalog.entity.ProductEntity;
 import com.codewalnut.productcatalog.exception.DuplicateSkuException;
+import com.codewalnut.productcatalog.exception.InsufficientStockException;
+import com.codewalnut.productcatalog.exception.InvalidStockAdjustmentException;
 import com.codewalnut.productcatalog.exception.ProductLimitReachedException;
 import com.codewalnut.productcatalog.exception.ProductNotFoundException;
 import com.codewalnut.productcatalog.mapper.ProductEntityMapper;
 import com.codewalnut.productcatalog.repository.ProductRepository;
-import com.codewalnut.productcatalog.service.ProductPageRequestFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -42,6 +45,8 @@ class ProductServiceTest {
     @Mock
     private ProductRepository productRepository;
 
+    private ProductPersistenceSupport productPersistenceSupport;
+
     private CatalogProperties catalogProperties;
 
     private ProductService productService;
@@ -51,11 +56,13 @@ class ProductServiceTest {
         catalogProperties = new CatalogProperties();
         catalogProperties.setMaximumProducts(500);
         catalogProperties.setLowStockThreshold(5);
+        productPersistenceSupport = new ProductPersistenceSupport(productRepository);
         productService = new ProductService(
                 productRepository,
                 new ProductEntityMapper(),
                 catalogProperties,
-                new ProductPageRequestFactory(catalogProperties));
+                new ProductPageRequestFactory(catalogProperties),
+                productPersistenceSupport);
     }
 
     @Test
@@ -64,7 +71,8 @@ class ProductServiceTest {
         ProductRequest request = validRequest("SKU-001");
         when(productRepository.count()).thenReturn(0L);
         when(productRepository.existsBySkuIgnoreCase("SKU-001")).thenReturn(false);
-        when(productRepository.save(any(ProductEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(productRepository.saveAndFlush(any(ProductEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
         ProductResponse response = productService.create(request);
@@ -72,7 +80,7 @@ class ProductServiceTest {
         // Assert
         assertNotNull(response.getId());
         assertEquals("SKU-001", response.getSku());
-        verify(productRepository).save(any(ProductEntity.class));
+        verify(productRepository).saveAndFlush(any(ProductEntity.class));
     }
 
     @Test
@@ -84,7 +92,7 @@ class ProductServiceTest {
 
         // Act & Assert
         assertThrows(DuplicateSkuException.class, () -> productService.create(request));
-        verify(productRepository, never()).save(any(ProductEntity.class));
+        verify(productRepository, never()).saveAndFlush(any(ProductEntity.class));
     }
 
     @Test
@@ -130,7 +138,8 @@ class ProductServiceTest {
         ProductRequest request = validRequest("SKU-002");
         when(productRepository.findById(id)).thenReturn(Optional.of(existing));
         when(productRepository.existsBySkuIgnoreCaseAndIdNot("SKU-002", id)).thenReturn(false);
-        when(productRepository.save(any(ProductEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(productRepository.saveAndFlush(any(ProductEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
         ProductResponse response = productService.update(id, request);
@@ -140,7 +149,7 @@ class ProductServiceTest {
         assertEquals("SKU-002", response.getSku());
 
         ArgumentCaptor<ProductEntity> captor = ArgumentCaptor.forClass(ProductEntity.class);
-        verify(productRepository).save(captor.capture());
+        verify(productRepository).saveAndFlush(captor.capture());
         assertEquals(id, captor.getValue().getId());
     }
 
@@ -164,7 +173,8 @@ class ProductServiceTest {
         request.setActive(false);
         when(productRepository.count()).thenReturn(0L);
         when(productRepository.existsBySkuIgnoreCase("SKU-INACTIVE")).thenReturn(false);
-        when(productRepository.save(any(ProductEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(productRepository.saveAndFlush(any(ProductEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
         ProductResponse response = productService.create(request);
@@ -239,7 +249,68 @@ class ProductServiceTest {
 
         // Act & Assert
         assertThrows(ProductLimitReachedException.class, () -> productService.create(request));
-        verify(productRepository, never()).save(any(ProductEntity.class));
+        verify(productRepository, never()).saveAndFlush(any(ProductEntity.class));
+    }
+
+    @Test
+    void givenSaveThrowsSkuConstraint_whenCreate_thenThrowsDuplicateSkuException() {
+        // Arrange
+        ProductRequest request = validRequest("RACE-001");
+        when(productRepository.count()).thenReturn(0L);
+        when(productRepository.existsBySkuIgnoreCase("RACE-001")).thenReturn(false);
+        when(productRepository.saveAndFlush(any(ProductEntity.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate", new RuntimeException("products_sku_unique_lower")));
+
+        // Act & Assert
+        assertThrows(DuplicateSkuException.class, () -> productService.create(request));
+    }
+
+    @Test
+    void givenMissingProduct_whenAdjustStock_thenThrowsProductNotFoundException() {
+        UUID id = UUID.randomUUID();
+        StockAdjustmentRequest request = new StockAdjustmentRequest();
+        request.setAdjustment(1);
+        when(productRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThrows(ProductNotFoundException.class, () -> productService.adjustStock(id, request));
+    }
+
+    @Test
+    void givenZeroAdjustment_whenAdjustStock_thenThrowsInvalidStockAdjustmentException() {
+        UUID id = UUID.randomUUID();
+        StockAdjustmentRequest request = new StockAdjustmentRequest();
+        request.setAdjustment(0);
+
+        assertThrows(InvalidStockAdjustmentException.class, () -> productService.adjustStock(id, request));
+        verify(productRepository, never()).findById(id);
+    }
+
+    @Test
+    void givenInsufficientStock_whenAdjustStock_thenThrowsWithoutSaving() {
+        UUID id = UUID.randomUUID();
+        ProductEntity entity = savedEntity(id, "STK-001");
+        entity.applyRequestFields(entity.getSku(), entity.getName(), entity.getCategory(), entity.getPrice(), 2, true);
+        StockAdjustmentRequest request = new StockAdjustmentRequest();
+        request.setAdjustment(-5);
+        when(productRepository.findById(id)).thenReturn(Optional.of(entity));
+
+        assertThrows(InsufficientStockException.class, () -> productService.adjustStock(id, request));
+        verify(productRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void givenValidAdjustment_whenAdjustStock_thenPersistsUpdatedQuantity() {
+        UUID id = UUID.randomUUID();
+        ProductEntity entity = savedEntity(id, "STK-002");
+        StockAdjustmentRequest request = new StockAdjustmentRequest();
+        request.setAdjustment(3);
+        when(productRepository.findById(id)).thenReturn(Optional.of(entity));
+        when(productRepository.saveAndFlush(entity)).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ProductResponse response = productService.adjustStock(id, request);
+
+        assertEquals(4, response.getStockQuantity());
+        verify(productRepository).saveAndFlush(entity);
     }
 
     private ProductRequest validRequest(String sku) {

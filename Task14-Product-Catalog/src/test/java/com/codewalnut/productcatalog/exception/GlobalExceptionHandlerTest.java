@@ -2,8 +2,9 @@ package com.codewalnut.productcatalog.exception;
 
 import com.codewalnut.productcatalog.dto.ErrorResponse;
 import com.codewalnut.productcatalog.dto.FieldErrorDetail;
-import jakarta.servlet.http.HttpServletRequest;
 import com.codewalnut.productcatalog.dto.ProductRequest;
+import com.codewalnut.productcatalog.entity.ProductEntity;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -106,6 +109,26 @@ class GlobalExceptionHandlerTest {
         // Assert
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertFalse(response.getBody().getMessage().isBlank());
+    }
+
+    @Test
+    void givenMalformedBody_whenHandleUnreadableBody_thenReturns400() {
+        ResponseEntity<ErrorResponse> response = handler.handleUnreadableBody(
+                new HttpMessageNotReadableException("Invalid JSON"), request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Malformed request body", response.getBody().getMessage());
+        assertEquals("/api/products", response.getBody().getPath());
+    }
+
+    @Test
+    void givenOptimisticLockFailure_whenHandle_thenReturns409ErrorEnvelope() {
+        ResponseEntity<ErrorResponse> response = handler.handleOptimisticLockingFailure(
+                new ObjectOptimisticLockingFailureException(ProductEntity.class, UUID.randomUUID()), request);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals(409, response.getBody().getStatus());
+        assertEquals("Product was updated by another transaction", response.getBody().getMessage());
     }
 
     @Test

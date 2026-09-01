@@ -14,11 +14,11 @@ import com.codewalnut.productcatalog.exception.ProductNotFoundException;
 import com.codewalnut.productcatalog.mapper.ProductEntityMapper;
 import com.codewalnut.productcatalog.repository.ProductRepository;
 import com.codewalnut.productcatalog.repository.ProductSpecifications;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -31,19 +31,22 @@ public class ProductService {
     private final ProductEntityMapper productEntityMapper;
     private final CatalogProperties catalogProperties;
     private final ProductPageRequestFactory productPageRequestFactory;
+    private final ProductPersistenceSupport productPersistenceSupport;
 
     public ProductService(
             ProductRepository productRepository,
             ProductEntityMapper productEntityMapper,
             CatalogProperties catalogProperties,
-            ProductPageRequestFactory productPageRequestFactory) {
+            ProductPageRequestFactory productPageRequestFactory,
+            ProductPersistenceSupport productPersistenceSupport) {
         this.productRepository = productRepository;
         this.productEntityMapper = productEntityMapper;
         this.catalogProperties = catalogProperties;
         this.productPageRequestFactory = productPageRequestFactory;
+        this.productPersistenceSupport = productPersistenceSupport;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public ProductResponse create(ProductRequest request) {
         if (productRepository.count() >= catalogProperties.getMaximumProducts()) {
             throw new ProductLimitReachedException(catalogProperties.getMaximumProducts());
@@ -53,12 +56,8 @@ public class ProductService {
         }
         UUID id = UUID.randomUUID();
         ProductEntity entity = productEntityMapper.toNewEntity(id, request);
-        try {
-            ProductEntity saved = productRepository.save(entity);
-            return productEntityMapper.toResponse(saved);
-        } catch (DataIntegrityViolationException exception) {
-            throw new DuplicateSkuException(request.getSku());
-        }
+        ProductEntity saved = productPersistenceSupport.saveAndFlush(entity, request.getSku());
+        return productEntityMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -105,12 +104,8 @@ public class ProductService {
             throw new DuplicateSkuException(request.getSku());
         }
         productEntityMapper.applyUpdate(entity, request);
-        try {
-            ProductEntity saved = productRepository.save(entity);
-            return productEntityMapper.toResponse(saved);
-        } catch (DataIntegrityViolationException exception) {
-            throw new DuplicateSkuException(request.getSku());
-        }
+        ProductEntity saved = productPersistenceSupport.saveAndFlush(entity, request.getSku());
+        return productEntityMapper.toResponse(saved);
     }
 
     @Transactional
@@ -129,7 +124,7 @@ public class ProductService {
         }
 
         entity.adjustStockBy(adjustment);
-        ProductEntity saved = productRepository.save(entity);
+        ProductEntity saved = productRepository.saveAndFlush(entity);
         return productEntityMapper.toResponse(saved);
     }
 

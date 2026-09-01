@@ -1,5 +1,6 @@
 package com.codewalnut.productcatalog;
 
+import com.codewalnut.productcatalog.repository.ProductRepository;
 import com.codewalnut.productcatalog.support.PostgreSqlTestSupport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,13 +36,12 @@ class ProductIntegrationTest extends PostgreSqlTestSupport {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private ProductRepository productRepository;
+
     @BeforeEach
-    void resetCatalog() throws Exception {
-        MvcResult listResult = mockMvc.perform(get("/api/products")).andReturn();
-        JsonNode page = objectMapper.readTree(listResult.getResponse().getContentAsString());
-        for (JsonNode product : page.get("content")) {
-            mockMvc.perform(delete("/api/products/{id}", product.get("id").asText()));
-        }
+    void resetCatalog() {
+        productRepository.deleteAll();
     }
 
     @Test

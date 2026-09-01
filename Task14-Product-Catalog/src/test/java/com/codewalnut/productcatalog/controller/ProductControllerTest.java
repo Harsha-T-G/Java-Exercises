@@ -91,6 +91,27 @@ class ProductControllerTest extends PostgreSqlTestSupport {
     }
 
     @Test
+    void givenMalformedJson_whenCreateProduct_thenReturns400() throws Exception {
+        mockMvc.perform(post("/api/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{invalid-json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Malformed request body"));
+    }
+
+    @Test
+    void givenPriceWithTooManyDecimals_whenCreateProduct_thenReturns400() throws Exception {
+        ProductRequest request = validRequest("SKU-PREC");
+        request.setPrice(new BigDecimal("1.999"));
+
+        mockMvc.perform(post("/api/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors[?(@.field=='price')]").exists());
+    }
+
+    @Test
     void givenMissingProduct_whenGetById_thenReturns404ErrorEnvelope() throws Exception {
         // Act & Assert
         mockMvc.perform(get("/api/products/{id}", UUID.randomUUID()))

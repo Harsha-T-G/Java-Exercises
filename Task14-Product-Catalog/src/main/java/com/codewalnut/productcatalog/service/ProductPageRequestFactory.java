@@ -42,7 +42,7 @@ public class ProductPageRequestFactory {
                     "Page size must be between 1 and " + catalogProperties.getMaxPageSize());
         }
 
-        Sort sortOrder = parseSort(sort);
+        Sort sortOrder = parseSort(sort).and(Sort.by(Sort.Direction.ASC, "id"));
         return PageRequest.of(page, resolvedSize, sortOrder);
     }
 
