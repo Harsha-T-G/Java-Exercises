@@ -19,7 +19,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -258,11 +260,30 @@ class ProductServiceTest {
         ProductRequest request = validRequest("RACE-001");
         when(productRepository.count()).thenReturn(0L);
         when(productRepository.existsBySkuIgnoreCase("RACE-001")).thenReturn(false);
+        ConstraintViolationException cause =
+                new ConstraintViolationException("duplicate key", null, "products_sku_unique_lower");
         when(productRepository.saveAndFlush(any(ProductEntity.class)))
-                .thenThrow(new DataIntegrityViolationException("duplicate", new RuntimeException("products_sku_unique_lower")));
+                .thenThrow(new DataIntegrityViolationException("duplicate", cause));
 
         // Act & Assert
-        assertThrows(DuplicateSkuException.class, () -> productService.create(request));
+        DuplicateSkuException exception =
+                assertThrows(DuplicateSkuException.class, () -> productService.create(request));
+        assertEquals("Product with SKU already exists: RACE-001", exception.getMessage());
+    }
+
+    @Test
+    void givenOptimisticLockConflict_whenAdjustStock_thenPropagatesConflict() {
+        UUID id = UUID.randomUUID();
+        ProductEntity entity = savedEntity(id, "STK-OPT");
+        StockAdjustmentRequest request = new StockAdjustmentRequest();
+        request.setAdjustment(1);
+        when(productRepository.findById(id)).thenReturn(Optional.of(entity));
+        when(productRepository.saveAndFlush(entity))
+                .thenThrow(new ObjectOptimisticLockingFailureException(ProductEntity.class, id));
+
+        assertThrows(
+                ObjectOptimisticLockingFailureException.class,
+                () -> productService.adjustStock(id, request));
     }
 
     @Test

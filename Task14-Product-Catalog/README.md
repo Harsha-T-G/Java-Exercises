@@ -132,7 +132,7 @@ Only **health** and **info** actuator endpoints are exposed. Health reports data
 
 ## Sample requests
 
-**Create product**
+**Create product** — `price` must be greater than zero with at most **2 decimal places** (matches PostgreSQL `NUMERIC(19,2)`).
 
 ```bash
 curl -X POST http://localhost:8080/api/products \

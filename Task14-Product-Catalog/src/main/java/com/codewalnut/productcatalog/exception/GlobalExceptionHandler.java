@@ -170,10 +170,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception exception, HttpServletRequest request) {
         String errorReferenceId = UUID.randomUUID().toString();
         log.error(
-                "Unhandled exception [errorReferenceId={}, path={}]",
+                "Unhandled exception [errorReferenceId={}, path={}, exceptionType={}]",
                 errorReferenceId,
                 request.getRequestURI(),
-                exception);
+                exception.getClass().getName());
         return buildResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "An unexpected error occurred",

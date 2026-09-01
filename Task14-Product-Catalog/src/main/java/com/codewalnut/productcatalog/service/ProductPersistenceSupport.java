@@ -18,32 +18,29 @@ public class ProductPersistenceSupport {
         this.productRepository = productRepository;
     }
 
-    ProductEntity saveAndFlush(ProductEntity entity, String skuForDuplicateMapping) {
+    public ProductEntity saveAndFlush(ProductEntity entity, String skuForDuplicateMapping) {
         try {
             return productRepository.saveAndFlush(entity);
         } catch (DataIntegrityViolationException exception) {
-            DuplicateSkuException duplicateSku = mapDuplicateSku(exception, skuForDuplicateMapping);
-            if (duplicateSku != null) {
-                throw duplicateSku;
+            if (skuForDuplicateMapping != null && isSkuConstraintViolation(exception)) {
+                throw new DuplicateSkuException(skuForDuplicateMapping);
             }
             throw exception;
         }
     }
 
-    private DuplicateSkuException mapDuplicateSku(DataIntegrityViolationException exception, String sku) {
-        if (isSkuConstraintViolation(exception)) {
-            return new DuplicateSkuException(sku);
-        }
-        return null;
+    public ProductEntity saveAndFlush(ProductEntity entity) {
+        return saveAndFlush(entity, null);
     }
 
     private boolean isSkuConstraintViolation(DataIntegrityViolationException exception) {
-        Throwable cause = exception.getCause();
-        if (cause instanceof ConstraintViolationException constraintViolation) {
-            String constraintName = constraintViolation.getConstraintName();
-            return SKU_UNIQUE_CONSTRAINT.equals(constraintName);
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof ConstraintViolationException constraintViolation) {
+                return SKU_UNIQUE_CONSTRAINT.equals(constraintViolation.getConstraintName());
+            }
+            current = current.getCause();
         }
-        String message = exception.getMostSpecificCause().getMessage();
-        return message != null && message.toLowerCase().contains(SKU_UNIQUE_CONSTRAINT);
+        return false;
     }
 }

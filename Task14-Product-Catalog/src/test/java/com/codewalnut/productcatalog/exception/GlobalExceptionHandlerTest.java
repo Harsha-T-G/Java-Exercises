@@ -132,6 +132,34 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void givenProductLimitReached_whenHandle_thenReturns409ErrorEnvelope() {
+        ResponseEntity<ErrorResponse> response = handler.handleProductLimitReached(
+                new ProductLimitReachedException(20), request);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals(409, response.getBody().getStatus());
+        assertEquals("/api/products", response.getBody().getPath());
+    }
+
+    @Test
+    void givenInvalidPagination_whenHandle_thenReturns400ErrorEnvelope() {
+        ResponseEntity<ErrorResponse> response = handler.handleInvalidPagination(
+                new InvalidPaginationException("Page size must be between 1 and 10"), request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Page size must be between 1 and 10", response.getBody().getMessage());
+    }
+
+    @Test
+    void givenInsufficientStock_whenHandle_thenReturns400ErrorEnvelope() {
+        ResponseEntity<ErrorResponse> response = handler.handleInsufficientStock(
+                new InsufficientStockException(), request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("/api/products", response.getBody().getPath());
+    }
+
+    @Test
     void givenUnsupportedMethod_whenHandle_thenReturns405() {
         // Act
         ResponseEntity<ErrorResponse> response = handler.handleMethodNotSupported(

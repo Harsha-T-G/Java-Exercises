@@ -36,7 +36,8 @@
 - Single-table catalog; no categories table or full-text search.
 - Product limit checked via `count()` — acceptable at configured max (500 default).
 - Tests share one PostgreSQL Testcontainer per JVM run (faster, but not fully isolated containers per class).
-- Optimistic-lock conflict test relies on concurrent updates in production; not simulated in automated tests.
+- Optimistic-lock API test uses repository + unit/service coverage; full concurrent HTTP 409 not simulated.
+- Maximum-product limit check is best-effort under concurrent creates (no SERIALIZABLE — avoids PostgreSQL serialization failures).
 
 ## Verification
 

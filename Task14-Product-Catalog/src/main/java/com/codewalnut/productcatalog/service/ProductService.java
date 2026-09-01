@@ -18,7 +18,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -46,7 +45,7 @@ public class ProductService {
         this.productPersistenceSupport = productPersistenceSupport;
     }
 
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional
     public ProductResponse create(ProductRequest request) {
         if (productRepository.count() >= catalogProperties.getMaximumProducts()) {
             throw new ProductLimitReachedException(catalogProperties.getMaximumProducts());
@@ -124,7 +123,7 @@ public class ProductService {
         }
 
         entity.adjustStockBy(adjustment);
-        ProductEntity saved = productRepository.saveAndFlush(entity);
+        ProductEntity saved = productPersistenceSupport.saveAndFlush(entity);
         return productEntityMapper.toResponse(saved);
     }
 
