@@ -95,6 +95,50 @@ class ProductIntegrationTest extends PostgreSqlTestSupport {
     }
 
     @Test
+    void givenMixedProducts_whenFilterPaginateAndSort_thenReturnsExpectedPage() throws Exception {
+        // Arrange
+        createProductWithCategory("PAGE-A", "Electronics", "Alpha");
+        createProductWithCategory("PAGE-B", "Electronics", "Bravo");
+        createProductWithCategory("PAGE-C", "Books", "Charlie");
+
+        // Act & Assert
+        mockMvc.perform(get("/api/products")
+                        .param("category", "electronics")
+                        .param("active", "true")
+                        .param("page", "0")
+                        .param("size", "1")
+                        .param("sort", "name,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].sku").value("PAGE-A"))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(2));
+    }
+
+    @Test
+    void givenNewProduct_whenCreate_thenDatabaseRecordMatchesResponse() throws Exception {
+        // Arrange
+        String payload = objectMapper.writeValueAsString(validProductPayload("DB-001"));
+
+        // Act
+        MvcResult createResult = mockMvc.perform(post("/api/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String id = objectMapper.readTree(createResult.getResponse().getContentAsString()).get("id").asText();
+
+        // Assert — new request confirms persistence
+        mockMvc.perform(get("/api/products/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sku").value("DB-001"))
+                .andExpect(jsonPath("$.name").value("Integration Product"))
+                .andExpect(jsonPath("$.createdAt").exists())
+                .andExpect(jsonPath("$.version").exists());
+    }
+
+    @Test
     void givenLowStockProducts_whenQueryLowStock_thenReturnsOnlyActiveProductsWithinThreshold() throws Exception {
         // Arrange
         createProductWithStock("LOW-1", 2, true);
@@ -121,6 +165,16 @@ class ProductIntegrationTest extends PostgreSqlTestSupport {
         Map<String, Object> payload = validProductPayload(sku);
         payload.put("stockQuantity", stock);
         payload.put("active", active);
+        mockMvc.perform(post("/api/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isCreated());
+    }
+
+    private void createProductWithCategory(String sku, String category, String name) throws Exception {
+        Map<String, Object> payload = validProductPayload(sku);
+        payload.put("category", category);
+        payload.put("name", name);
         mockMvc.perform(post("/api/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))
