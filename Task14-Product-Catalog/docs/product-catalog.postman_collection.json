@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Product Catalog API",
-    "description": "Week 5 Spring Boot Product Catalog — import and run against `./mvnw spring-boot:run` (default port 8080).\n\n**Variables**\n- `baseUrl` — API root (default `http://localhost:8080`)\n- `productId` — set automatically after **Create Product**",
+    "description": "Week 6 Spring Boot Product Catalog with PostgreSQL — import and run against `./mvnw spring-boot:run` with Docker Compose + `.env` (default port 8080).\n\n**Variables**\n- `baseUrl` — API root (default `http://localhost:8080`)\n- `productId` — set automatically after **Create Product**",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -149,6 +149,45 @@
           "response": []
         },
         {
+          "name": "List Products (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?page=0&size=10&sort=name,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"],
+              "query": [
+                {"key": "page", "value": "0"},
+                {"key": "size", "value": "10"},
+                {"key": "sort", "value": "name,asc"}
+              ]
+            },
+            "description": "Returns a page of products with metadata (content, page, size, totalElements, totalPages)."
+          },
+          "response": []
+        },
+        {
+          "name": "List Products (Filter + Paginate)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?category=Electronics&active=true&page=0&size=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"],
+              "query": [
+                {"key": "category", "value": "Electronics"},
+                {"key": "active", "value": "true"},
+                {"key": "page", "value": "0"},
+                {"key": "size", "value": "5"}
+              ]
+            },
+            "description": "Case-insensitive category filter combined with pagination."
+          },
+          "response": []
+        },
+        {
           "name": "List All Products",
           "request": {
             "method": "GET",
@@ -158,7 +197,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "products"]
             },
-            "description": "Returns all products in the in-memory catalog."
+            "description": "Returns the first page using the configured default page size."
           },
           "response": []
         },
@@ -210,6 +249,29 @@
               "path": ["api", "products", "{{productId}}"]
             },
             "description": "Updates an existing product. Requires `productId` from Create Product."
+          },
+          "response": []
+        },
+        {
+          "name": "Adjust Stock",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adjustment\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}/stock",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}", "stock"]
+            },
+            "description": "Adjust stock by delta. Positive adds, negative removes. Requires `productId` from Create Product."
           },
           "response": []
         },

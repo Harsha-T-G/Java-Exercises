@@ -1,9 +1,9 @@
 # Product Catalog API
 
-Spring Boot REST API for product management. Week 5 delivered an in-memory
-catalog; Week 6 adds PostgreSQL persistence with Flyway migrations.
+Spring Boot REST API for product management with PostgreSQL persistence,
+Flyway migrations, pagination, filtering, and stock adjustment.
 
-**Status:** Week 6 Exercises 1–3 implemented (PostgreSQL, Flyway, JPA repository). Exercise 4+ pending.
+**Status:** Week 6 complete (Exercises 1–6).
 
 ## Prerequisites
 
@@ -19,7 +19,8 @@ docker info   # Docker must be running
 ./mvnw clean verify
 ```
 
-Tests spin up a PostgreSQL 16 container automatically via Testcontainers.
+Tests spin up a shared PostgreSQL 16 container automatically via Testcontainers.
+**64 tests** must pass — see [docs/test-evidence.txt](docs/test-evidence.txt).
 
 ### Troubleshooting: Docker / Testcontainers errors
 
@@ -89,6 +90,7 @@ Default port: **8080**. PostgreSQL: **5432**.
 | `DB_USERNAME` | Application database user (default: `product_catalog_app`) |
 | `DB_PASSWORD` | Application password — **never commit**; set via `.env` locally |
 | `POSTGRES_PASSWORD` | Used by Docker Compose to initialize the container user |
+| `CATALOG_MAXIMUM_PRODUCTS` | Optional override for catalog size limit (default 500) |
 
 If the database is unavailable, the application fails at startup with a clear
 connection error. No credentials belong in Git — use `.env` (gitignored) or your
@@ -98,37 +100,35 @@ shell environment.
 
 - `spring.jpa.hibernate.ddl-auto=validate` — Hibernate never creates or alters tables.
 - Flyway owns schema changes under `src/main/resources/db/migration/`.
-- Migrations are added in Week 6 Exercise 2.
+- **V1__create_products_table.sql** — creates `products` with constraints and case-insensitive SKU index.
+- On first start against an empty database, Flyway applies V1; subsequent starts skip already-applied migrations.
 
 ## Profiles
 
-| Profile | Command | Database | low-stock threshold | max products |
-|---------|---------|----------|---------------------|--------------|
-| default | Requires `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | PostgreSQL | 5 | 500 (or `CATALOG_MAXIMUM_PRODUCTS`) |
-| dev | `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev` + `.env` | PostgreSQL (Docker Compose) | 10 | 1000 |
-| test | `./mvnw test` (automatic via `src/test/resources/application.properties`) | PostgreSQL Testcontainers | 2 | 20 |
-
-Override max products:
-
-```bash
-CATALOG_MAXIMUM_PRODUCTS=5 ./mvnw spring-boot:run
-```
+| Profile | Command | Database | low-stock threshold | max products | default page size |
+|---------|---------|----------|---------------------|--------------|-------------------|
+| default | Requires `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | PostgreSQL | 5 | 500 (or `CATALOG_MAXIMUM_PRODUCTS`) | 20 |
+| dev | `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev` + `.env` | PostgreSQL (Docker Compose) | 10 | 1000 | 20 |
+| test | `./mvnw test` (automatic) | PostgreSQL Testcontainers | 2 | 20 | 5 |
 
 ## Endpoint table
 
 | Method | Path | Status | Purpose |
 |--------|------|--------|---------|
 | GET | `/api/info` | 200 | Application metadata |
-| GET | `/actuator/health` | 200 | Health check |
+| GET | `/actuator/health` | 200 | Health check (includes `db` component) |
 | GET | `/actuator/info` | 200 | Build info |
 | POST | `/api/products` | 201 | Create product |
-| GET | `/api/products` | 200 | List all products |
+| GET | `/api/products` | 200 | Paginated, filterable product list |
 | GET | `/api/products/low-stock` | 200 | Active low-stock products |
 | GET | `/api/products/{id}` | 200 | Get one product |
 | PUT | `/api/products/{id}` | 200 | Update product |
+| PATCH | `/api/products/{id}/stock` | 200 | Adjust stock by delta |
 | DELETE | `/api/products/{id}` | 204 | Delete product |
 
-Error responses: **400** validation, **404** not found, **405** method not allowed, **409** conflict, **500** unexpected.
+Error responses: **400** validation / business rule, **404** not found, **405** method not allowed, **409** conflict (duplicate SKU or optimistic lock), **500** unexpected.
+
+Only **health** and **info** actuator endpoints are exposed. Health reports database availability without leaking credentials.
 
 ## Sample requests
 
@@ -140,6 +140,40 @@ curl -X POST http://localhost:8080/api/products \
   -d '{"sku":"SKU-001","name":"Sample","category":"General","price":19.99,"stockQuantity":10,"active":true}'
 ```
 
+**Paginated list with sorting**
+
+```bash
+curl "http://localhost:8080/api/products?page=0&size=10&sort=name,asc"
+```
+
+Response shape:
+
+```json
+{
+  "content": [ /* ProductResponse[] */ ],
+  "page": 0,
+  "size": 10,
+  "totalElements": 42,
+  "totalPages": 5
+}
+```
+
+**Filter + paginate**
+
+```bash
+curl "http://localhost:8080/api/products?category=Electronics&active=true&page=0&size=5&sort=price,desc"
+```
+
+Allowed sort fields: `name`, `price`, `category`, `createdAt`, `stockQuantity`.
+
+**Adjust stock**
+
+```bash
+curl -X PATCH http://localhost:8080/api/products/{id}/stock \
+  -H "Content-Type: application/json" \
+  -d '{"adjustment":-3}'
+```
+
 **Validation error (400)**
 
 ```bash
@@ -148,15 +182,24 @@ curl -X POST http://localhost:8080/api/products \
   -d '{"sku":"","name":"X","category":"General","price":-1,"stockQuantity":0}'
 ```
 
-See [docs/curl-commands.sh](docs/curl-commands.sh) for more samples.
+See [docs/curl-commands.sh](docs/curl-commands.sh) for a runnable script and
+[docs/product-catalog.postman_collection.json](docs/product-catalog.postman_collection.json) for Postman.
+
+## Architecture diagrams
+
+See [docs/diagrams/week6-architecture.md](docs/diagrams/week6-architecture.md):
+
+- Component diagram (client → controller → service → repository → PostgreSQL)
+- ER diagram for the `products` table
+- Sequence diagram for creating a product
 
 ## Package structure
 
 ```text
 com.codewalnut.productcatalog/
 ├── controller/   InfoController, ProductController
-├── service/      ProductService
-├── repository/   ProductRepository (Spring Data JPA)
+├── service/      ProductService, ProductPageRequestFactory
+├── repository/   ProductRepository, ProductSpecifications
 ├── entity/       ProductEntity
 ├── dto/          Request/response and error payloads
 ├── mapper/       ProductEntityMapper
@@ -164,11 +207,14 @@ com.codewalnut.productcatalog/
 └── config/       CatalogProperties
 ```
 
-## Exercise branches
+## Week 6 branches
 
 ```text
-task14-main → exercise-1-setup → … → exercise-6-tests →
-week6-exercise-1-postgresql-config → …
+task14-main
+  └── week6-exercise-1-postgresql-config   (Ex 1–3: PostgreSQL, Flyway, JPA)
+        └── week6-exercise-4-api-features  (Ex 4: pagination, filter, stock PATCH)
+              └── week6-exercise-5-database-tests  (Ex 5: repository & integration tests)
+                    └── week6-exercise-6-docs-delivery  (Ex 6: docs & evidence)
 ```
 
 ## Agentic workflow
@@ -185,6 +231,7 @@ week6-exercise-1-postgresql-config → …
 
 ```bash
 ./mvnw clean verify
-./mvnw -Dtest=ProductServiceTest test
+./mvnw -Dtest=ProductRepositoryTest test
+./mvnw -Dtest=ProductServiceIntegrationTest test
 ./mvnw -Dtest=ProductIntegrationTest test
 ```
