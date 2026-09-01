@@ -132,4 +132,8 @@ public class ProductEntity {
         this.stockQuantity = stockQuantity;
         this.active = active;
     }
+
+    public void adjustStockBy(int adjustment) {
+        this.stockQuantity = this.stockQuantity + adjustment;
+    }
 }

@@ -38,8 +38,8 @@ class ProductIntegrationTest extends PostgreSqlTestSupport {
     @BeforeEach
     void resetCatalog() throws Exception {
         MvcResult listResult = mockMvc.perform(get("/api/products")).andReturn();
-        JsonNode products = objectMapper.readTree(listResult.getResponse().getContentAsString());
-        for (JsonNode product : products) {
+        JsonNode page = objectMapper.readTree(listResult.getResponse().getContentAsString());
+        for (JsonNode product : page.get("content")) {
             mockMvc.perform(delete("/api/products/{id}", product.get("id").asText()));
         }
     }

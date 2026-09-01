@@ -1,6 +1,7 @@
 package com.codewalnut.productcatalog.service;
 
 import com.codewalnut.productcatalog.config.CatalogProperties;
+import com.codewalnut.productcatalog.dto.ProductPageResponse;
 import com.codewalnut.productcatalog.dto.ProductRequest;
 import com.codewalnut.productcatalog.dto.ProductResponse;
 import com.codewalnut.productcatalog.entity.ProductEntity;
@@ -9,12 +10,17 @@ import com.codewalnut.productcatalog.exception.ProductLimitReachedException;
 import com.codewalnut.productcatalog.exception.ProductNotFoundException;
 import com.codewalnut.productcatalog.mapper.ProductEntityMapper;
 import com.codewalnut.productcatalog.repository.ProductRepository;
+import com.codewalnut.productcatalog.service.ProductPageRequestFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -45,7 +51,11 @@ class ProductServiceTest {
         catalogProperties = new CatalogProperties();
         catalogProperties.setMaximumProducts(500);
         catalogProperties.setLowStockThreshold(5);
-        productService = new ProductService(productRepository, new ProductEntityMapper(), catalogProperties);
+        productService = new ProductService(
+                productRepository,
+                new ProductEntityMapper(),
+                catalogProperties,
+                new ProductPageRequestFactory(catalogProperties));
     }
 
     @Test
@@ -188,17 +198,20 @@ class ProductServiceTest {
     }
 
     @Test
-    void givenStoredProducts_whenFindAll_thenReturnsMappedResponses() {
+    void givenStoredProducts_whenFindProducts_thenReturnsPagedResponses() {
         // Arrange
         ProductEntity entity = savedEntity(UUID.randomUUID(), "SKU-001");
-        when(productRepository.findAll()).thenReturn(List.of(entity));
+        Page<ProductEntity> page = new PageImpl<>(List.of(entity));
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
 
         // Act
-        List<ProductResponse> responses = productService.findAll();
+        ProductPageResponse response = productService.findProducts(0, 5, null, null, null);
 
         // Assert
-        assertEquals(1, responses.size());
-        assertEquals("SKU-001", responses.get(0).getSku());
+        assertEquals(1, response.getContent().size());
+        assertEquals("SKU-001", response.getContent().get(0).getSku());
+        assertEquals(0, response.getPage());
+        assertEquals(1, response.getSize());
     }
 
     @Test

@@ -1,15 +1,23 @@
 package com.codewalnut.productcatalog.service;
 
 import com.codewalnut.productcatalog.config.CatalogProperties;
+import com.codewalnut.productcatalog.dto.ProductPageResponse;
 import com.codewalnut.productcatalog.dto.ProductRequest;
 import com.codewalnut.productcatalog.dto.ProductResponse;
+import com.codewalnut.productcatalog.dto.StockAdjustmentRequest;
 import com.codewalnut.productcatalog.entity.ProductEntity;
 import com.codewalnut.productcatalog.exception.DuplicateSkuException;
+import com.codewalnut.productcatalog.exception.InsufficientStockException;
+import com.codewalnut.productcatalog.exception.InvalidStockAdjustmentException;
 import com.codewalnut.productcatalog.exception.ProductLimitReachedException;
 import com.codewalnut.productcatalog.exception.ProductNotFoundException;
 import com.codewalnut.productcatalog.mapper.ProductEntityMapper;
 import com.codewalnut.productcatalog.repository.ProductRepository;
+import com.codewalnut.productcatalog.repository.ProductSpecifications;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,14 +30,17 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductEntityMapper productEntityMapper;
     private final CatalogProperties catalogProperties;
+    private final ProductPageRequestFactory productPageRequestFactory;
 
     public ProductService(
             ProductRepository productRepository,
             ProductEntityMapper productEntityMapper,
-            CatalogProperties catalogProperties) {
+            CatalogProperties catalogProperties,
+            ProductPageRequestFactory productPageRequestFactory) {
         this.productRepository = productRepository;
         this.productEntityMapper = productEntityMapper;
         this.catalogProperties = catalogProperties;
+        this.productPageRequestFactory = productPageRequestFactory;
     }
 
     @Transactional
@@ -51,10 +62,24 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResponse> findAll() {
-        return productRepository.findAll().stream()
+    public ProductPageResponse findProducts(
+            int page,
+            Integer size,
+            String sort,
+            String category,
+            Boolean active) {
+        Pageable pageable = productPageRequestFactory.createPageable(page, size, sort);
+        Specification<ProductEntity> specification = ProductSpecifications.withFilters(category, active);
+        Page<ProductEntity> result = productRepository.findAll(specification, pageable);
+        List<ProductResponse> content = result.getContent().stream()
                 .map(productEntityMapper::toResponse)
                 .toList();
+        return new ProductPageResponse(
+                content,
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages());
     }
 
     @Transactional(readOnly = true)
@@ -86,6 +111,26 @@ public class ProductService {
         } catch (DataIntegrityViolationException exception) {
             throw new DuplicateSkuException(request.getSku());
         }
+    }
+
+    @Transactional
+    public ProductResponse adjustStock(UUID id, StockAdjustmentRequest request) {
+        int adjustment = request.getAdjustment();
+        if (adjustment == 0) {
+            throw new InvalidStockAdjustmentException();
+        }
+
+        ProductEntity entity = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException(id));
+
+        int newQuantity = entity.getStockQuantity() + adjustment;
+        if (newQuantity < 0) {
+            throw new InsufficientStockException();
+        }
+
+        entity.adjustStockBy(adjustment);
+        ProductEntity saved = productRepository.save(entity);
+        return productEntityMapper.toResponse(saved);
     }
 
     @Transactional
