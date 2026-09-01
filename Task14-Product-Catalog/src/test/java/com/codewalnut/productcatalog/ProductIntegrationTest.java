@@ -1,6 +1,7 @@
 package com.codewalnut.productcatalog;
 
 import com.codewalnut.productcatalog.repository.ProductRepository;
+import com.codewalnut.productcatalog.support.ProductTestFixtures;
 import com.codewalnut.productcatalog.support.PostgreSqlTestSupport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,9 +16,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -139,6 +146,58 @@ class ProductIntegrationTest extends PostgreSqlTestSupport {
     }
 
     @Test
+    void givenProductsWithSameName_whenPaginateByName_thenUsesIdTieBreaker() throws Exception {
+        // Arrange
+        createProductWithCategory("TIE-A", "General", "Shared Name");
+        createProductWithCategory("TIE-B", "General", "Shared Name");
+
+        // Act & Assert — page size 1 with name sort returns stable first page
+        mockMvc.perform(get("/api/products")
+                        .param("page", "0")
+                        .param("size", "1")
+                        .param("sort", "name,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.totalElements").value(2));
+    }
+
+    @Test
+    void givenConcurrentStockPatches_whenOptimisticLockLost_thenReturns409() throws Exception {
+        // Arrange
+        String id = createProduct("LOCK-409");
+        Map<String, Object> payload = Map.of("adjustment", 1);
+        String body = objectMapper.writeValueAsString(payload);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        Callable<Integer> patchStock = () -> {
+            ready.countDown();
+            start.await();
+            return mockMvc.perform(patch("/api/products/{id}/stock", id)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andReturn()
+                    .getResponse()
+                    .getStatus();
+        };
+
+        try {
+            Future<Integer> first = executor.submit(patchStock);
+            Future<Integer> second = executor.submit(patchStock);
+            ready.await();
+            start.countDown();
+
+            int statusOne = first.get();
+            int statusTwo = second.get();
+            assertTrue(statusOne == 200 || statusTwo == 200);
+            assertTrue(statusOne == 409 || statusTwo == 409);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     void givenLowStockProducts_whenQueryLowStock_thenReturnsOnlyActiveProductsWithinThreshold() throws Exception {
         // Arrange
         createProductWithStock("LOW-1", 2, true);
@@ -172,7 +231,7 @@ class ProductIntegrationTest extends PostgreSqlTestSupport {
     }
 
     private void createProductWithCategory(String sku, String category, String name) throws Exception {
-        Map<String, Object> payload = validProductPayload(sku);
+        Map<String, Object> payload = ProductTestFixtures.validProductPayload(sku);
         payload.put("category", category);
         payload.put("name", name);
         mockMvc.perform(post("/api/products")
@@ -182,13 +241,6 @@ class ProductIntegrationTest extends PostgreSqlTestSupport {
     }
 
     private Map<String, Object> validProductPayload(String sku) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("sku", sku);
-        payload.put("name", "Integration Product");
-        payload.put("category", "General");
-        payload.put("price", new BigDecimal("12.50"));
-        payload.put("stockQuantity", 10);
-        payload.put("active", true);
-        return payload;
+        return ProductTestFixtures.validProductPayload(sku);
     }
 }

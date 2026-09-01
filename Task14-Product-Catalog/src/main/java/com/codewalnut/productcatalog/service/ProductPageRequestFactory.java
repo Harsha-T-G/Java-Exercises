@@ -2,6 +2,7 @@ package com.codewalnut.productcatalog.service;
 
 import com.codewalnut.productcatalog.config.CatalogProperties;
 import com.codewalnut.productcatalog.exception.InvalidPaginationException;
+import com.codewalnut.productcatalog.exception.InvalidSortDirectionException;
 import com.codewalnut.productcatalog.exception.InvalidSortFieldException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -9,7 +10,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 @Component
@@ -17,13 +17,6 @@ public class ProductPageRequestFactory {
 
     private static final Set<String> ALLOWED_SORT_FIELDS =
             Set.of("name", "price", "category", "createdAt", "stockQuantity");
-
-    private static final Map<String, String> SORT_FIELD_TO_PROPERTY = Map.of(
-            "name", "name",
-            "price", "price",
-            "category", "category",
-            "createdAt", "createdAt",
-            "stockQuantity", "stockQuantity");
 
     private final CatalogProperties catalogProperties;
 
@@ -63,10 +56,10 @@ public class ProductPageRequestFactory {
             if ("desc".equals(directionValue)) {
                 direction = Sort.Direction.DESC;
             } else if (!"asc".equals(directionValue)) {
-                throw new InvalidSortFieldException(field);
+                throw new InvalidSortDirectionException(parts[1].trim());
             }
         }
 
-        return Sort.by(direction, SORT_FIELD_TO_PROPERTY.get(field));
+        return Sort.by(direction, field);
     }
 }

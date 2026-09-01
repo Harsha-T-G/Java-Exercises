@@ -20,7 +20,7 @@ docker info   # Docker must be running
 ```
 
 Tests spin up a shared PostgreSQL 16 container automatically via Testcontainers.
-**64 tests** must pass — see [docs/test-evidence.txt](docs/test-evidence.txt).
+**93 tests** must pass — see [docs/test-evidence.txt](docs/test-evidence.txt).
 
 ### Troubleshooting: Docker / Testcontainers errors
 
@@ -132,7 +132,7 @@ Only **health** and **info** actuator endpoints are exposed. Health reports data
 
 ## Sample requests
 
-**Create product** — `price` must be greater than zero with at most **2 decimal places** (matches PostgreSQL `NUMERIC(19,2)`).
+**Create product** — `price` must be greater than zero with at most **17 integer digits and 2 decimal places** (matches PostgreSQL `NUMERIC(19,2)`).
 
 ```bash
 curl -X POST http://localhost:8080/api/products \

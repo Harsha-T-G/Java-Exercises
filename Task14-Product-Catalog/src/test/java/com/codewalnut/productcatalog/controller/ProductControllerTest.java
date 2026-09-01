@@ -2,6 +2,7 @@ package com.codewalnut.productcatalog.controller;
 
 import com.codewalnut.productcatalog.dto.ProductRequest;
 import com.codewalnut.productcatalog.repository.ProductRepository;
+import com.codewalnut.productcatalog.support.ProductTestFixtures;
 import com.codewalnut.productcatalog.support.PostgreSqlTestSupport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,7 +45,7 @@ class ProductControllerTest extends PostgreSqlTestSupport {
 
     @BeforeEach
     void clearProducts() {
-        productRepository.findAll().forEach(product -> productRepository.deleteById(product.getId()));
+        productRepository.deleteAll();
     }
 
     @Test
@@ -179,14 +180,23 @@ class ProductControllerTest extends PostgreSqlTestSupport {
     }
 
     @Test
-    void givenProduct_whenAdjustStock_thenReturnsUpdatedQuantity() throws Exception {
-        String id = createProduct("SKU-STOCK");
+    void givenProduct_whenIncreaseStock_thenReturnsUpdatedQuantity() throws Exception {
+        String id = createProduct("SKU-STOCK-UP");
 
         mockMvc.perform(patch("/api/products/{id}/stock", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"adjustment\":5}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.stockQuantity").value(15));
+    }
+
+    @Test
+    void givenProduct_whenDecreaseStock_thenReturnsUpdatedQuantity() throws Exception {
+        String id = createProduct("SKU-STOCK-DOWN");
+        mockMvc.perform(patch("/api/products/{id}/stock", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"adjustment\":5}"))
+                .andExpect(status().isOk());
 
         mockMvc.perform(patch("/api/products/{id}/stock", id)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -306,13 +316,6 @@ class ProductControllerTest extends PostgreSqlTestSupport {
     }
 
     private ProductRequest validRequest(String sku) {
-        ProductRequest request = new ProductRequest();
-        request.setSku(sku);
-        request.setName("Sample Product");
-        request.setCategory("General");
-        request.setPrice(new BigDecimal("19.99"));
-        request.setStockQuantity(10);
-        request.setActive(true);
-        return request;
+        return ProductTestFixtures.validProductRequest(sku);
     }
 }

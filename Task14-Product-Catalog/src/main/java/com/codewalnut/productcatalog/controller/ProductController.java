@@ -3,6 +3,7 @@ package com.codewalnut.productcatalog.controller;
 import com.codewalnut.productcatalog.dto.ProductPageResponse;
 import com.codewalnut.productcatalog.dto.ProductRequest;
 import com.codewalnut.productcatalog.dto.ProductResponse;
+import com.codewalnut.productcatalog.dto.ProductSearchCriteria;
 import com.codewalnut.productcatalog.dto.StockAdjustmentRequest;
 import com.codewalnut.productcatalog.service.ProductService;
 import jakarta.validation.Valid;
@@ -46,7 +47,8 @@ public class ProductController {
             @RequestParam(required = false) String sort,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) Boolean active) {
-        return ResponseEntity.ok(productService.findProducts(page, size, sort, category, active));
+        return ResponseEntity.ok(productService.findProducts(
+                new ProductSearchCriteria(page, size, sort, category, active)));
     }
 
     @GetMapping("/low-stock")

@@ -36,12 +36,12 @@
 - Single-table catalog; no categories table or full-text search.
 - Product limit checked via `count()` — acceptable at configured max (500 default).
 - Tests share one PostgreSQL Testcontainer per JVM run (faster, but not fully isolated containers per class).
-- Optimistic-lock API test uses repository + unit/service coverage; full concurrent HTTP 409 not simulated.
+- Optimistic-lock coverage includes concurrent stock PATCH integration test (HTTP 409 path).
 - Maximum-product limit check is best-effort under concurrent creates (no SERIALIZABLE — avoids PostgreSQL serialization failures).
 
 ## Verification
 
 ```text
-./mvnw clean test — 64 tests, BUILD SUCCESS
+./mvnw clean test — 93 tests, BUILD SUCCESS
 docker compose up -d && ./mvnw spring-boot:run — application starts against empty DB
 ```

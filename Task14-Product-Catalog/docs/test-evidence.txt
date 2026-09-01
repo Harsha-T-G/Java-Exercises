@@ -3,20 +3,24 @@ Date: 2026-09-01
 Command: ./mvnw clean test
 Result: BUILD SUCCESS
 
-Tests run: 86, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 93, Failures: 0, Errors: 0, Skipped: 0
 
 Test classes (PostgreSQL Testcontainers unless noted):
 - FlywayMigrationTest (2)
 - ProductCatalogApplicationTest (1)
-- ProductIntegrationTest (6)
+- ProductIntegrationTest (8)
 - ProductRepositoryTest (8) — @DataJpaTest
 - ProductServiceTest (19) — Mockito unit tests
 - ProductServiceIntegrationTest (8)
 - ProductPersistenceSupportIntegrationTest (2)
 - ProductPageRequestFactoryTest (4)
-- ProductControllerTest (21)
+- ProductControllerTest (22)
+- ProductControllerWebMvcTest (3) — standalone MockMvc + mocked service
 - ActuatorEndpointTest (3)
-- GlobalExceptionHandlerTest (11)
+- GlobalExceptionHandlerTest (12)
 - InfoControllerTest (1)
 
-Docker: Docker Desktop 29.x with docker-java api.version=1.44
+Notes:
+- Shared PostgreSQL Testcontainers singleton (Docker 29 via docker-java.properties api 1.44)
+- Surefire uses -Dnet.bytebuddy.experimental=true for Java 26 Mockito compatibility
+- DOCKER_HOST no longer hardcoded in pom.xml or testcontainers.properties

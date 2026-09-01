@@ -4,6 +4,7 @@ import com.codewalnut.productcatalog.config.CatalogProperties;
 import com.codewalnut.productcatalog.dto.ProductPageResponse;
 import com.codewalnut.productcatalog.dto.ProductRequest;
 import com.codewalnut.productcatalog.dto.ProductResponse;
+import com.codewalnut.productcatalog.dto.ProductSearchCriteria;
 import com.codewalnut.productcatalog.dto.StockAdjustmentRequest;
 import com.codewalnut.productcatalog.entity.ProductEntity;
 import com.codewalnut.productcatalog.exception.DuplicateSkuException;
@@ -58,6 +59,8 @@ class ProductServiceTest {
         catalogProperties = new CatalogProperties();
         catalogProperties.setMaximumProducts(500);
         catalogProperties.setLowStockThreshold(5);
+        catalogProperties.setDefaultPageSize(20);
+        catalogProperties.setMaxPageSize(100);
         productPersistenceSupport = new ProductPersistenceSupport(productRepository);
         productService = new ProductService(
                 productRepository,
@@ -217,7 +220,8 @@ class ProductServiceTest {
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
 
         // Act
-        ProductPageResponse response = productService.findProducts(0, 5, null, null, null);
+        ProductPageResponse response = productService.findProducts(
+                new ProductSearchCriteria(0, 5, null, null, null));
 
         // Assert
         assertEquals(1, response.getContent().size());

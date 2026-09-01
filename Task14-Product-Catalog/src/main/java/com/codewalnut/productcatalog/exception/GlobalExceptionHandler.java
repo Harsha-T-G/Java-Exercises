@@ -96,6 +96,16 @@ public class GlobalExceptionHandler {
                 null);
     }
 
+    @ExceptionHandler(InvalidSortDirectionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidSortDirection(
+            InvalidSortDirectionException exception, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage(),
+                request.getRequestURI(),
+                null);
+    }
+
     @ExceptionHandler(InsufficientStockException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientStock(
             InsufficientStockException exception, HttpServletRequest request) {
@@ -168,17 +178,19 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception exception, HttpServletRequest request) {
-        String errorReferenceId = UUID.randomUUID().toString();
+        final String errorReferenceId = UUID.randomUUID().toString();
         log.error(
                 "Unhandled exception [errorReferenceId={}, path={}, exceptionType={}]",
                 errorReferenceId,
                 request.getRequestURI(),
-                exception.getClass().getName());
+                exception.getClass().getName(),
+                exception);
         return buildResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "An unexpected error occurred",
                 request.getRequestURI(),
-                null);
+                null,
+                errorReferenceId);
     }
 
     private ResponseEntity<ErrorResponse> buildResponse(
@@ -186,13 +198,23 @@ public class GlobalExceptionHandler {
             String message,
             String path,
             List<FieldErrorDetail> fieldErrors) {
+        return buildResponse(status, message, path, fieldErrors, null);
+    }
+
+    private ResponseEntity<ErrorResponse> buildResponse(
+            HttpStatus status,
+            String message,
+            String path,
+            List<FieldErrorDetail> fieldErrors,
+            String errorReferenceId) {
         ErrorResponse body = new ErrorResponse(
                 Instant.now(),
                 status.value(),
                 status.getReasonPhrase(),
                 message,
                 path,
-                fieldErrors);
+                fieldErrors,
+                errorReferenceId);
         return ResponseEntity.status(status).body(body);
     }
 }

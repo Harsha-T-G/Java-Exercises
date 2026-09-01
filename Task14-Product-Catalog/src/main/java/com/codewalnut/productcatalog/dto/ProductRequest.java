@@ -11,6 +11,9 @@ import java.math.BigDecimal;
 
 public class ProductRequest {
 
+    private static final int MAX_PRICE_INTEGER_DIGITS = 17;
+    private static final int MAX_PRICE_FRACTION_DIGITS = 2;
+
     @NotBlank
     @Size(min = 3, max = 30)
     private String sku;
@@ -25,13 +28,18 @@ public class ProductRequest {
 
     @NotNull
     @DecimalMin(value = "0.0", inclusive = false)
-    @Digits(integer = 17, fraction = 2, message = "Price must have at most 2 decimal places")
+    @Digits(
+            integer = MAX_PRICE_INTEGER_DIGITS,
+            fraction = MAX_PRICE_FRACTION_DIGITS,
+            message = "Price must be greater than zero with at most 17 integer digits and 2 decimal places")
     private BigDecimal price;
 
     @Min(0)
     private int stockQuantity;
 
     private boolean active = true;
+
+    private Long version;
 
     public String getSku() {
         return sku;
@@ -79,5 +87,13 @@ public class ProductRequest {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }

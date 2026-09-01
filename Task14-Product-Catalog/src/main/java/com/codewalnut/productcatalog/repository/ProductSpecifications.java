@@ -4,6 +4,8 @@ import com.codewalnut.productcatalog.entity.ProductEntity;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.util.Locale;
+
 public final class ProductSpecifications {
 
     private ProductSpecifications() {
@@ -17,7 +19,7 @@ public final class ProductSpecifications {
                         predicate,
                         criteriaBuilder.equal(
                                 criteriaBuilder.lower(root.get("category")),
-                                category.toLowerCase()));
+                                category.toLowerCase(Locale.ROOT)));
             }
             if (active != null) {
                 predicate = criteriaBuilder.and(

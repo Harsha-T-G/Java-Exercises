@@ -26,7 +26,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -58,7 +58,7 @@ class GlobalExceptionHandlerTest {
         assertNotNull(body);
         assertEquals(404, body.getStatus());
         assertEquals("/api/products", body.getPath());
-        assertNull(body.getFieldErrors());
+        assertTrue(body.getFieldErrors().isEmpty());
     }
 
     @Test
@@ -160,6 +160,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void givenInvalidSortDirection_whenHandle_thenReturns400ErrorEnvelope() {
+        ResponseEntity<ErrorResponse> response = handler.handleInvalidSortDirection(
+                new InvalidSortDirectionException("sideways"), request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Invalid sort direction 'sideways'. Use asc or desc.", response.getBody().getMessage());
+        assertTrue(response.getBody().getFieldErrors().isEmpty());
+    }
+
+    @Test
     void givenUnsupportedMethod_whenHandle_thenReturns405() {
         // Act
         ResponseEntity<ErrorResponse> response = handler.handleMethodNotSupported(
@@ -179,5 +189,6 @@ class GlobalExceptionHandlerTest {
         // Assert
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertEquals("An unexpected error occurred", response.getBody().getMessage());
+        assertNotNull(response.getBody().getErrorReferenceId());
     }
 }

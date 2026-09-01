@@ -4,6 +4,7 @@ import com.codewalnut.productcatalog.config.CatalogProperties;
 import com.codewalnut.productcatalog.dto.ProductPageResponse;
 import com.codewalnut.productcatalog.dto.ProductRequest;
 import com.codewalnut.productcatalog.dto.ProductResponse;
+import com.codewalnut.productcatalog.dto.ProductSearchCriteria;
 import com.codewalnut.productcatalog.dto.StockAdjustmentRequest;
 import com.codewalnut.productcatalog.entity.ProductEntity;
 import com.codewalnut.productcatalog.exception.DuplicateSkuException;
@@ -17,6 +18,7 @@ import com.codewalnut.productcatalog.repository.ProductSpecifications;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,14 +62,11 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public ProductPageResponse findProducts(
-            int page,
-            Integer size,
-            String sort,
-            String category,
-            Boolean active) {
-        Pageable pageable = productPageRequestFactory.createPageable(page, size, sort);
-        Specification<ProductEntity> specification = ProductSpecifications.withFilters(category, active);
+    public ProductPageResponse findProducts(ProductSearchCriteria criteria) {
+        Pageable pageable = productPageRequestFactory.createPageable(
+                criteria.page(), criteria.size(), criteria.sort());
+        Specification<ProductEntity> specification = ProductSpecifications.withFilters(
+                criteria.category(), criteria.active());
         Page<ProductEntity> result = productRepository.findAll(specification, pageable);
         List<ProductResponse> content = result.getContent().stream()
                 .map(productEntityMapper::toResponse)
@@ -99,6 +98,7 @@ public class ProductService {
     public ProductResponse update(UUID id, ProductRequest request) {
         ProductEntity entity = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException(id));
+        assertExpectedVersion(entity, request.getVersion(), id);
         if (productRepository.existsBySkuIgnoreCaseAndIdNot(request.getSku(), id)) {
             throw new DuplicateSkuException(request.getSku());
         }
@@ -116,6 +116,7 @@ public class ProductService {
 
         ProductEntity entity = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException(id));
+        assertExpectedVersion(entity, request.getVersion(), id);
 
         int newQuantity = entity.getStockQuantity() + adjustment;
         if (newQuantity < 0) {
@@ -133,5 +134,11 @@ public class ProductService {
             throw new ProductNotFoundException(id);
         }
         productRepository.deleteById(id);
+    }
+
+    private void assertExpectedVersion(ProductEntity entity, Long expectedVersion, UUID id) {
+        if (expectedVersion != null && !expectedVersion.equals(entity.getVersion())) {
+            throw new ObjectOptimisticLockingFailureException(ProductEntity.class, id);
+        }
     }
 }

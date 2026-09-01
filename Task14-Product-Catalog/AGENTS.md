@@ -17,26 +17,14 @@ Surface conflicts instead of silently selecting a source.
 
 ## Repository purpose
 
-Product Catalog is a Spring Boot 3.x learning application that exposes an
-in-memory REST API for product management. It demonstrates layered design,
+Product Catalog is a Spring Boot 3.x learning application that exposes a REST API
+for product management backed by PostgreSQL. It demonstrates layered design,
 dependency injection, validation, centralized error handling, configuration
-profiles, and automated testing. It deliberately has no database, JPA, or Lombok.
+profiles, Flyway migrations, JPA persistence, and Testcontainers-backed testing.
+It deliberately has no Lombok.
 
-## Gated workflow
-
-Use **Specify → Plan → Tasks → Implement**. Stop for human approval after each
-phase. Do not implement behavior that is not in the approved spec.
-
-| Phase | Artifact | Global skill | Gate |
-| --- | --- | --- | --- |
-| Specify | `SPEC.md`, `docs/specs/product-catalog/` | `spec-driven-development` (Phase 1) | Human approves spec |
-| Plan | `docs/plans/product-catalog-implementation-plan.md` | `spec-driven-development` (Phase 2) + `planning-and-task-breakdown` | Human approves plan |
-| Tasks | `docs/plans/product-catalog-tasks.md` | `spec-driven-development` (Phase 3) + `planning-and-task-breakdown` | Human approves tasks |
-| Implement | Source and tests per task | `incremental-implementation` + `test-driven-development` | Human review per task |
-| Verify | Test evidence, PR body | run `./mvnw clean verify` before claiming done | Evidence before claims |
-
-**Current status:** Exercises 1–6 implemented on `exercise-6-tests`. New work still
-follows the gated workflow and global skills above.
+**Current status:** Week 6 complete on `week6-exercise-6-docs-delivery`
+(PostgreSQL, pagination, stock PATCH, database tests, docs).
 
 ### Project path overrides (addyosmani defaults)
 
@@ -72,12 +60,13 @@ bootstrap tells the agent to fetch the canonical skill from
 src/main/java/com/codewalnut/productcatalog/
   controller/     HTTP adapters only
   service/        business rules and orchestration
-  repository/     in-memory persistence boundary
-  model/          internal domain entities
+  repository/     Spring Data JPA + Specifications
+  entity/         JPA persistence model
+  mapper/         entity ↔ DTO mapping
   dto/            request/response and error payloads
   exception/      domain exceptions and global handler
   config/         @ConfigurationProperties and profile wiring
-src/test/java/    mirrors production packages
+src/test/java/    mirrors production packages + support/
 SPEC.md           product contract index and approval status
 docs/specs/product-catalog/   capability contract chunks
 docs/plans/       implementation plan and tasks (after spec approval)
@@ -169,15 +158,16 @@ Always:
 Ask first:
 
 - Changing the approved spec or Java/Spring Boot version.
-- Adding dependencies beyond the exercise list (web, validation, actuator, test).
-- Adding database, JPA, Lombok, or CI workflows.
+- Adding dependencies beyond the exercise list (web, validation, actuator, JPA,
+  PostgreSQL driver, Flyway, Testcontainers, test).
+- Adding Lombok, Spring Security, or CI workflows.
 - Changing public API contracts or package boundaries.
 
 Never:
 
 - Add secrets, credentials, or personal environment data to the repo.
 - Log passwords, tokens, or complete sensitive request bodies.
-- Use Lombok, Spring Data JPA, or a database for this exercise.
+- Use Lombok for this exercise.
 - Weaken, skip, or delete a failing test to obtain a green build.
 - Implement behavior that is not in the approved spec.
 - Commit, push, or open a pull request without explicit user authorization.

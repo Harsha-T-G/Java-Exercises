@@ -2,6 +2,7 @@ package com.codewalnut.productcatalog.service;
 
 import com.codewalnut.productcatalog.config.CatalogProperties;
 import com.codewalnut.productcatalog.exception.InvalidPaginationException;
+import com.codewalnut.productcatalog.exception.InvalidSortDirectionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Pageable;
@@ -45,9 +46,9 @@ class ProductPageRequestFactoryTest {
     }
 
     @Test
-    void givenInvalidSortDirection_whenCreatePageable_thenThrowsInvalidSortFieldException() {
+    void givenInvalidSortDirection_whenCreatePageable_thenThrowsInvalidSortDirectionException() {
         assertThrows(
-                com.codewalnut.productcatalog.exception.InvalidSortFieldException.class,
+                InvalidSortDirectionException.class,
                 () -> factory.createPageable(0, 10, "name,sideways"));
     }
 }

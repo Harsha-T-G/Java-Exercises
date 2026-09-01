@@ -14,6 +14,4 @@ if ! docker image inspect postgres:16-alpine >/dev/null 2>&1; then
   docker pull postgres:16-alpine
 fi
 
-export DOCKER_HOST="${DOCKER_HOST:-unix:///var/run/docker.sock}"
-
 exec ./mvnw clean verify "$@"
