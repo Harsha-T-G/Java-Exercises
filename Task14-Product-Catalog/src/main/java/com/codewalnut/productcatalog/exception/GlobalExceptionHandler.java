@@ -3,6 +3,7 @@ package com.codewalnut.productcatalog.exception;
 import com.codewalnut.productcatalog.dto.ErrorResponse;
 import com.codewalnut.productcatalog.dto.FieldErrorDetail;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -44,6 +45,16 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.CONFLICT,
                 exception.getMessage(),
+                request.getRequestURI(),
+                null);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException exception, HttpServletRequest request) {
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                "A database constraint was violated",
                 request.getRequestURI(),
                 null);
     }

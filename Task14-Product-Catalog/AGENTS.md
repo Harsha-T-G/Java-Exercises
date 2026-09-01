@@ -27,29 +27,44 @@ profiles, and automated testing. It deliberately has no database, JPA, or Lombok
 Use **Specify → Plan → Tasks → Implement**. Stop for human approval after each
 phase. Do not implement behavior that is not in the approved spec.
 
-| Phase | Artifact | Gate |
-| --- | --- | --- |
-| Specify | `SPEC.md`, `docs/specs/product-catalog/` | Human approves spec |
-| Plan | `docs/plans/product-catalog-implementation-plan.md` | Human approves plan |
-| Tasks | `docs/plans/product-catalog-tasks.md` | Human approves tasks |
-| Implement | Source and tests per task | TDD + verify-feature-readiness |
+| Phase | Artifact | Global skill | Gate |
+| --- | --- | --- | --- |
+| Specify | `SPEC.md`, `docs/specs/product-catalog/` | `spec-driven-development` (Phase 1) | Human approves spec |
+| Plan | `docs/plans/product-catalog-implementation-plan.md` | `spec-driven-development` (Phase 2) + `planning-and-task-breakdown` | Human approves plan |
+| Tasks | `docs/plans/product-catalog-tasks.md` | `spec-driven-development` (Phase 3) + `planning-and-task-breakdown` | Human approves tasks |
+| Implement | Source and tests per task | `incremental-implementation` + `test-driven-development` | Human review per task |
+| Verify | Test evidence, PR body | run `./mvnw clean verify` before claiming done | Evidence before claims |
 
-**Current status:** Draft spec and plan prepared. **Implementation is forbidden
-until the spec is approved.**
+**Current status:** Exercises 1–6 implemented on `exercise-6-tests`. New work still
+follows the gated workflow and global skills above.
+
+### Project path overrides (addyosmani defaults)
+
+The `spec-driven-development` skill defaults to `tasks/plan.md` and `tasks/todo.md`.
+**Override for this repository:**
+
+| Skill default | Use instead |
+| --- | --- |
+| Spec output | `docs/specs/product-catalog/` chunks indexed by `SPEC.md` |
+| `tasks/plan.md` | `docs/plans/product-catalog-implementation-plan.md` |
+| `tasks/todo.md` | `docs/plans/product-catalog-tasks.md` |
 
 ## Required routing
 
-- New features or material behavior changes: read and follow
-  `.agents/skills/spec-driven-development/SKILL.md`.
-- API, validation, configuration, or error-handling work: read the matching
-  `docs/specs/product-catalog/` chunk listed in `SPEC.md`.
-- Java or Spring Boot source, tests, Maven: read `.guidelines/java.md` and
-  `.guidelines/spring-boot.md`.
-- Implementation or bug fixes: follow
-  `.agents/skills/test-driven-development/SKILL.md`.
-- Before reporting work ready, committing, or opening a PR: follow
-  `.agents/skills/verify-feature-readiness/SKILL.md`.
-- Domain terminology: read `CONTEXT.md`.
+Use the **bootstrap skills in this repo** (`.agents/skills/*/SKILL.md`). Each
+bootstrap tells the agent to fetch the canonical skill from
+[addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) via
+`npx skills use` or `npx skills add` if not installed locally. See
+`.agents/README.md` and `scripts/setup-agent-skills.sh`.
+
+| Situation | Skill(s) | Also read |
+| --- | --- | --- |
+| New project, feature, or unclear requirements | `spec-driven-development` | `SPEC.md`, affected spec chunk |
+| Breaking work into ordered tasks | `planning-and-task-breakdown` | `docs/plans/` |
+| Implementation or bug fix (production behavior) | `test-driven-development` | `.guidelines/java.md`, `.guidelines/spring-boot.md` |
+| Multi-file change landing incrementally | `incremental-implementation` | approved task from `docs/plans/product-catalog-tasks.md` |
+| API, validation, config, or error-handling detail | — | matching `docs/specs/product-catalog/` chunk in `SPEC.md` |
+| Domain terminology | — | `CONTEXT.md` |
 
 ## Ownership and layout
 
@@ -67,7 +82,7 @@ SPEC.md           product contract index and approval status
 docs/specs/product-catalog/   capability contract chunks
 docs/plans/       implementation plan and tasks (after spec approval)
 CONTEXT.md        stable domain glossary
-.agents/skills/   reusable agent procedures
+.agents/skills/   bootstrap SKILL.md → fetch canonical skills from web
 .guidelines/      stable stack conventions
 ```
 

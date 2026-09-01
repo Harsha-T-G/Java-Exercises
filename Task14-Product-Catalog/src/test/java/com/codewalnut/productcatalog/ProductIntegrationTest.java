@@ -1,5 +1,6 @@
 package com.codewalnut.productcatalog;
 
+import com.codewalnut.productcatalog.support.PostgreSqlTestSupport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class ProductIntegrationTest {
+class ProductIntegrationTest extends PostgreSqlTestSupport {
 
     @Autowired
     private MockMvc mockMvc;

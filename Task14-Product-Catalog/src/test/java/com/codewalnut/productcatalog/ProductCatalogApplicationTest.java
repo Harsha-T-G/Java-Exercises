@@ -1,10 +1,11 @@
 package com.codewalnut.productcatalog;
 
+import com.codewalnut.productcatalog.support.PostgreSqlTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class ProductCatalogApplicationTest {
+class ProductCatalogApplicationTest extends PostgreSqlTestSupport {
 
     @Test
     void givenApplicationStarts_whenContextLoads_thenSpringContextIsAvailable() {
