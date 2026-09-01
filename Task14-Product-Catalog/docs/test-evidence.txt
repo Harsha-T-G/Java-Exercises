@@ -10,11 +10,11 @@ Test classes (PostgreSQL Testcontainers unless noted):
 - ProductCatalogApplicationTest (1)
 - ProductIntegrationTest (6)
 - ProductRepositoryTest (8) — @DataJpaTest
-- ProductServiceTest (13) — Mockito unit tests
-- ProductServiceIntegrationTest (7)
-- ProductControllerTest (19)
+- ProductServiceTest (18) — Mockito unit tests
+- ProductServiceIntegrationTest (8)
+- ProductControllerTest (21)
 - ActuatorEndpointTest (3)
-- GlobalExceptionHandlerTest (6)
+- GlobalExceptionHandlerTest (8)
 - InfoControllerTest (1)
 
 Docker: Docker Desktop 29.x with docker-java api.version=1.44
