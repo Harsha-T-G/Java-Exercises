@@ -89,7 +89,7 @@ curl http://localhost:8080/api/info
 curl http://localhost:8080/actuator/health
 ```
 
-With the `dev` profile, Swagger UI is available for interactive API testing:
+Swagger UI is available for interactive API testing (disabled only in the `test` profile):
 
 - **Swagger UI:** http://localhost:8080/swagger-ui.html
 - **OpenAPI JSON:** http://localhost:8080/v3/api-docs

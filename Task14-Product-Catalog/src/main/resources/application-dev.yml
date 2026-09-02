@@ -10,13 +10,3 @@ spring:
 catalog:
   low-stock-threshold: 10
   maximum-products: 1000
-
-springdoc:
-  api-docs:
-    enabled: true
-    path: /v3/api-docs
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui.html
-    tags-sorter: alpha
-    operations-sorter: method
